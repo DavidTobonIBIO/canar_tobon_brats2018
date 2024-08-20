@@ -49,7 +49,6 @@ data3D
 |      |      └──Brats18_CBICA_ABY_1_t1ce.nii.gz
 |      |      └──Brats18_CBICA_ABY_1_t2.nii.gz
 │      └──...
-
 """
 
 
@@ -222,12 +221,8 @@ if __name__ == "__main__":
     parent_path = os.path.dirname(file_path)
     grand_parent_path = os.path.dirname(parent_path)
 
-    train_path = os.path.join(
-        grand_parent_path, "data3D", "train_data"
-    )
-    validation_path = os.path.join(
-        grand_parent_path, "data3D", "val_data"
-    )
+    train_path = os.path.join(grand_parent_path, "data3D", "train_data")
+    validation_path = os.path.join(grand_parent_path, "data3D", "val_data")
 
     save_path_train_vol = os.path.join(train_path, "volumes")
     save_path_val_vol = os.path.join(validation_path, "volumes")
@@ -246,7 +241,6 @@ if __name__ == "__main__":
 
     if not os.path.exists(save_path_val_label):
         os.makedirs(save_path_val_label)
-
 
     brats2018_train = Brats2018Preprocess(
         data_dir=train_path,
