@@ -128,10 +128,10 @@ if __name__ == "__main__":
     file_path = os.path.abspath(__file__)
     parent_dir = os.path.dirname(file_path)
     grandparent_dir = os.path.dirname(parent_dir)
-    data_dir = os.path.join(grandparent_dir, "preproc_data", "train_data")
+    data_dir = os.path.join(grandparent_dir, "preproc_data", "val_data")
     cases = os.listdir(data_dir)
 
-    random.seed(42)
+    random.seed(33)
 
     idx = random.randint(0, len(cases))
     volume = load_volume(os.path.join(data_dir, cases[idx]))
@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     for i in range(3):
         visualizations_dir = os.path.join(
-            grandparent_dir, "visualizations", f"{idx}_{cases[idx]}", f"label_{i}"
+            grandparent_dir, "visualizations", "data", f"{idx}_{cases[idx]}", f"label_{i}"
         )
         os.makedirs(visualizations_dir, exist_ok=True)
         viz_animation(volume_indx=1, label_indx=i)
