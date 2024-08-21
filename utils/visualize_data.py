@@ -12,7 +12,9 @@ import os
 import random
 import matplotlib.pyplot as plt
 from matplotlib import animation
+import numpy as np
 import torch
+
 
 def animate(input_1, input_2):
     """animate pairs of image sequences of the same length on two conjugate axis"""
@@ -20,7 +22,7 @@ def animate(input_1, input_2):
         input_2
     ), f"two inputs should have the same number of frame but first input had {len(input_1)} and the second one {len(input_2)}"
     # set the figure and axis
-    fig, axis = plt.subplots(1, 2, figsize=(8, 8))
+    fig, axis = plt.subplots(1, 2, figsize=(8, 4))
     axis[0].set_axis_off()
     axis[1].set_axis_off()
     sequence_length = input_1.__len__()
@@ -53,10 +55,34 @@ def viz_animation(volume_indx: int = 1, label_indx: int = 1) -> None:
     x = volume[volume_indx, ...]
     y = label[label_indx, ...]
     ani = animate(input_1=x, input_2=y)
-    writervideo = animation.FFMpegWriter(fps=60) 
-    ani.save(os.path.join(animations_dir, f'brats_{idx}.mp4'), writer=writervideo)
-    
-    
+    writervideo = animation.FFMpegWriter(fps=60)
+    writergif = animation.PillowWriter(fps=15)
+    ani.save(
+        os.path.join(
+            visualizations_dir, f"brats_{idx}_vol{volume_indx}_label{label_indx}.mp4"
+        ),
+        writer=writervideo,
+    )
+    ani.save(
+        os.path.join(
+            visualizations_dir, f"brats_{idx}_vol{volume_indx}_label{label_indx}.gif"
+        ),
+        writer=writergif,
+    )
+
+
+def get_max_slice(label) -> int:
+    """get the slice with the maximum number of non-zero pixels"""
+    max_slice_idx = 0
+    max_area = 0
+    for i in range(label.shape[0]):
+        area = np.count_nonzero(label[i])
+        if area > max_area:
+            max_area = area
+            max_slice_idx = i
+    return max_slice_idx
+
+
 def viz_figure(volume_indx: int = 1, label_indx: int = 1) -> None:
     """
     pair visualization of the volume and label
@@ -67,15 +93,20 @@ def viz_figure(volume_indx: int = 1, label_indx: int = 1) -> None:
     assert label_indx in [0, 1, 2]
     x = volume[volume_indx, ...]
     y = label[label_indx, ...]
+    slice_idx = get_max_slice(y)
     fig, axis = plt.subplots(1, 2, figsize=(8, 4))
-    slice_indx = 64
-    axis[0].imshow(x[slice_indx], cmap="gray")
-    axis[1].imshow(y[slice_indx], cmap="gray")
+    axis[0].imshow(x[slice_idx], cmap="gray")
+    axis[1].imshow(y[slice_idx], cmap="gray")
     axis[0].axis("off")
     axis[1].axis("off")
     plt.tight_layout()
     plt.show()
-    plt.savefig(os.path.join(figures_dir, f'brats_{idx}.png'))
+    plt.savefig(
+        os.path.join(
+            visualizations_dir,
+            f"brats_{idx}_slice_{slice_idx}_vol{volume_indx}_label{label_indx}  .png",
+        )
+    )
 
 
 def load_volume(vol_path: str):
@@ -99,20 +130,17 @@ if __name__ == "__main__":
     grandparent_dir = os.path.dirname(parent_dir)
     data_dir = os.path.join(grandparent_dir, "preproc_data", "train_data")
     cases = os.listdir(data_dir)
-    animations_dir = os.path.join(grandparent_dir, "animations")
-    figures_dir = os.path.join(grandparent_dir, "figures")
-    os.makedirs(animations_dir, exist_ok=True)
-    os.makedirs(figures_dir, exist_ok=True)
-    
+
     random.seed(42)
 
     idx = random.randint(0, len(cases))
-    print(idx)
     volume = load_volume(os.path.join(data_dir, cases[idx]))
     label = load_label(os.path.join(data_dir, cases[idx]))
-    print(volume.shape, label.shape)
-    
-    viz_animation(volume_indx=0, label_indx=0)
-    
-    viz_figure(volume_indx=0, label_indx=0)
-    
+
+    for i in range(3):
+        visualizations_dir = os.path.join(
+            grandparent_dir, "visualizations", f"{idx}_{cases[idx]}", f"label_{i}"
+        )
+        os.makedirs(visualizations_dir, exist_ok=True)
+        viz_animation(volume_indx=1, label_indx=i)
+        viz_figure(volume_indx=1, label_indx=i)

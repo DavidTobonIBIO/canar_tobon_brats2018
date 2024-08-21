@@ -8,6 +8,7 @@ parent_path = os.path.dirname(file_path)
 grand_parent_path = os.path.dirname(parent_path)
 data_path = os.path.join(grand_parent_path, "MICCAI_BraTS_2018_Data_Training.zip")
 
+
 def unzip3D(data_path: str, output_path: str):
     """
     Unzip the 3D volume data
@@ -15,8 +16,9 @@ def unzip3D(data_path: str, output_path: str):
     output_path: path to the output folder
     """
     print(f"Unzipping data from {data_path} to {output_path}")
-    with zipfile.ZipFile(data_path, 'r') as zip_ref:
+    with zipfile.ZipFile(data_path, "r") as zip_ref:
         zip_ref.extractall(output_path)
+
 
 def move_files_to_train_data(temp_path: str, train_data_path: str):
     """
@@ -44,14 +46,15 @@ def move_files_to_train_data(temp_path: str, train_data_path: str):
                     shutil.move(file_path, new_file_path)
                     pbar.update(1)
 
+
 if __name__ == "__main__":
-    temp_path = os.path.join(grand_parent_path, "temp_data")  
+    temp_path = os.path.join(grand_parent_path, "temp_data")
     train_data_path = os.path.join(grand_parent_path, "data3D", "train_data")
-    
+
     # Debugging information
     print(f"Train data path: {train_data_path}")
     print(f"Temp data path: {temp_path}")
-    
+
     if not os.path.exists(train_data_path):
         print(f"Train data path does not exist. Processing data...")
 
@@ -63,7 +66,7 @@ if __name__ == "__main__":
             print(f"Temp data path already exists. Skipping unzip...")
 
         move_files_to_train_data(temp_path, train_data_path)
-        
+
         # Uncomment this line after verifying functionality to remove temporary files
         shutil.rmtree(temp_path)
     else:
