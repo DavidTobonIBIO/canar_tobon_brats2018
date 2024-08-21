@@ -1,22 +1,28 @@
-import os
-import torch
-import numpy as np
+"""
+This module contains classes and functions for volume preprocessing in the context of the BRATS2018 dataset.
+
+Classes:
+- ConvertToMultiChannelBasedOnBrats2018Classes: Converts labels to multi channels based on the BRATS2018 classes.
+- Brats2018Task1Preprocess: Preprocesses the BRATS2018 dataset for Task 1.
+
+Functions:
+- animate: Animates pairs of image sequences on two conjugate axes.
+
+Note: This code is based on the segformer3d implementation from the official paper repository: https://github.com/OSUPCVLab/SegFormer3D/blob/main/data/brats2017_seg/brats2021_raw_data/brats2021_seg_preprocess.py
+"""
+
 import os
 import torch
 import nibabel
 import numpy as np
-from tqdm import tqdm
-from joblib import Parallel, delayed
-import matplotlib.pyplot as plt
-from matplotlib import animation
 from monai.data import MetaTensor
-from multiprocessing import Process, Pool
+from multiprocessing import Pool
 from sklearn.preprocessing import MinMaxScaler
 from monai.transforms import (
     Orientation,
     EnsureType,
+    ConvertToMultiChannelBasedOnBratsClasses,
 )
-
 
 """
 data3D 
@@ -52,214 +58,203 @@ data3D
 """
 
 
-class ConvertToMultiChannelBasedOnBrats2017Classes(object):
-    """
-    Convert labels to multi channels based on brats17 classes:
-    "0": "background",
-    "1": "edema",
-    "2": "non-enhancing tumor",
-    "3": "enhancing tumour"
-    Annotations comprise the GD-enhancing tumor (ET — label 4), the peritumoral edema (ED — label 2),
-    and the necrotic and non-enhancing tumor (NCR/NET — label 1)
-    """
-
-    def __call__(self, img):
-        # if img has channel dim, squeeze it
-        if img.ndim == 4 and img.shape[0] == 1:
-            img = img.squeeze(0)
-
-        result = [
-            (img == 2) | (img == 3),
-            (img == 2) | (img == 3) | (img == 1),
-            img == 3,
-        ]
-        # merge labels 1 (tumor non-enh) and 3 (tumor enh) and 1 (large edema) to WT
-        # label 3 is ET
-        return (
-            torch.stack(result, dim=0)
-            if isinstance(img, torch.Tensor)
-            else np.stack(result, axis=0)
-        )
-
-
-class Brats2018Preprocess:
-    def __init__(self, data_dir, folder_name, save_dir_vol, save_dir_label):
+class Brats2018Preprocessor:
+    def __init__(
+        self,
+        data_dir: str,
+        split_folder_name: str,
+        save_dir: str,
+    ):
         """
-        data_dir: Path to data folder where the raw data is.
-        folder_name: Name of the folder of the training/validation data.
-        save_dir_vol: Path to directory where each case (vol_name) will be saved as a single file containing four modalities.
-        save_dir_label: Path to directory where the segmentations are going to be saved.
+        root_dir: path to the data folder where the raw train folder is
+        train_folder_name: name of the folder of the training data
+        save_dir: path to directory where each case is going to be saved as a single file containing four modalities
         """
-        self.data_dir = data_dir
+        self.split_folder_dir = os.path.join(data_dir, split_folder_name)
+        assert os.path.exists(self.split_folder_dir)
+        # walking through the raw training data and list all the folder names, i.e. case name
+        self.case_name = next(os.walk(self.split_folder_dir), (None, None, []))[1]
 
-        self.save_dir_vol = save_dir_vol
-        self.save_dir_label = save_dir_label
-        self.case_name = next(os.walk(self.data_dir), (None, None, []))[
-            2
-        ]  # get all the cases in the folder
-
-        print(self.case_name)
-
-        self.MRI_CODE = {
-            "Flair": "0000",
-            "T1w": "0001",
-            "T1gd": "0002",
-            "T2w": "0003",
-            "label": None,
-        }
+        # MRI type
+        self.MRI_TYPE = ["flair", "t1", "t1ce", "t2", "seg"]
+        self.save_dir = os.path.join(save_dir, split_folder_name)
 
     def __len__(self):
         return self.case_name.__len__()
 
+    def get_modality_fp(self, case_name: str, mri_type: str) -> str:
+        """
+        return the modality file path
+        case_name: patient ID
+        mri_type: any of the ["flair", "t1", "t1ce", "t2", "seg"]
+        """
+        modality_fp = os.path.join(
+            self.split_folder_dir,
+            case_name,
+            case_name + f"_{mri_type}.nii",
+        )
+        return modality_fp
+
+    def load_nifti(self, fp) -> list:
+        """
+        load a nifti file
+        fp: path to the nifti file with (nii or nii.gz) extension
+        """
+        nifti_data = nibabel.load(fp)
+        # get the floating point array
+        nifti_scan = nifti_data.get_fdata()
+        # get affine matrix
+        affine = nifti_data.affine
+        return nifti_scan, affine
+
     def normalize(self, x: np.ndarray) -> np.ndarray:
+        # Transform features by scaling each feature to a given range.
         scaler = MinMaxScaler(feature_range=(0, 1))
-        normalized_array = scaler.fit_transform(x.reshape(-1, x.shape[-1]))
-        normalized_array = normalized_array.reshape(x.shape)
-        return normalized_array
+        # (H, W, D) -> (H * W, D)
+        normalized_1D_array = scaler.fit_transform(x.reshape(-1, x.shape[-1]))
+        normalized_data = normalized_1D_array.reshape(x.shape)
+        return normalized_data
+
+    def orient(self, x: MetaTensor) -> MetaTensor:
+        # orient the array to be in (Right, Anterior, Superior) scanner coordinate systems
+        assert type(x) == MetaTensor
+        return Orientation(axcodes="RAS")(x)
 
     def detach_meta(self, x: MetaTensor) -> np.ndarray:
         assert type(x) == MetaTensor
         return EnsureType(data_type="numpy", track_meta=False)(x)
 
-    def get_vol_name(self, vol_path: str) -> str:
-        vol_name = vol_path.split(".")[0]
-        return vol_name
+    def crop_brats2018_zero_pixels(self, x: np.ndarray) -> np.ndarray:
+        # get rid of the zero pixels around mri scan and cut it so that the region is useful
+        # crop (1, 240, 240, 155) to (1, 128, 128, 128)
+        return x[:, 56:184, 56:184, 13:141]
 
-    def get_modality_fp(self, case_name: str, folder: str, mri_code: str = None):
-        if mri_code:
-            f_name = f"{case_name}_{mri_code}.nii.gz"
-        else:
-            f_name = f"{case_name}.nii.gz"
-
-        modality_fp = os.path.join(self.train_folder_dir, folder, f_name)
-        return modality_fp
-
-    def load_nii(self, path):
-        try:
-            vol_data = nibabel.load(path)
-            vol_data = vol_data.get_fdata()
-            affine = vol_data.affine
-            print(f"Loaded {path} successfully with shape {vol_data.shape}")
-            return vol_data, affine
-        except Exception as e:
-            print(f"Error loading {path}: {e}")
-            return None, None
-
-    def save_as_pt(self, idx):
-        try:
-            modalities, label, case_name = self.__getitem__(idx)
-            vol_save_path = os.path.join(self.save_dir_vol, f"{case_name}_vol.pt")
-            label_save_path = os.path.join(self.save_dir_label, f"{case_name}_label.pt")
-
-            torch.save(modalities, vol_save_path)
-            torch.save(label, label_save_path)
-            print(
-                f"Saved {case_name} volume and label to {vol_save_path} and {label_save_path}"
-            )
-        except Exception as e:
-            print(f"Error saving case {self.case_name[idx]}: {e}")
-
-    def crop_brats_2018(self, volume: np.ndarray) -> np.ndarray:
-        vol = volume[40:200, 24:216, :]
-        return vol
-
-    def _2meta_tensor(self, data, affine):
-        scan = MetaTensor(data, affine=affine)
-        D, H, W = scan.shape
-        scan = scan.view(1, D, H, W)
-        return scan
-
-    def prepocess_brats_modality(
-        self, data_fp: str, label_flag: bool = False
+    def preprocess_brats_modality(
+        self, data_fp: str, is_label: bool = False
     ) -> np.ndarray:
-        data, affine = self.load_nii(data_fp)
-
-        if label_flag:
+        """
+        apply preprocess stage to the modality
+        data_fp: directory to the modality
+        """
+        data, affine = self.load_nifti(data_fp)
+        # label do not the be normalized
+        if is_label:
+            # Binary mask does not need to be float64! For saving storage purposes!
             data = data.astype(np.uint8)
-            data = ConvertToMultiChannelBasedOnBrats2017Classes()(data)
+            # categorical -> one-hot-encoded
+            # (240, 240, 155) -> (3, 240, 240, 155)
+            data = ConvertToMultiChannelBasedOnBratsClasses()(data)
         else:
             data = self.normalize(x=data)
+            # (240, 240, 155) -> (1, 240, 240, 155)
             data = data[np.newaxis, ...]
 
         data = MetaTensor(x=data, affine=affine)
+        # for oreinting the coordinate system we need the affine matrix
+        data = self.orient(data)
+        # detaching the meta values from the oriented array
         data = self.detach_meta(data)
-        data = self.crop_brats_2018(data)
-
+        # (240, 240, 155) -> (128, 128, 128)
+        data = self.crop_brats2018_zero_pixels(data)
         return data
 
     def __getitem__(self, idx):
         case_name = self.case_name[idx]
-        case_name = self.get_vol_name(case_name)
+        # e.g: train/BraTS2018_00000/BraTS2018_00000_flair.nii.gz
 
-        code = self.MRI_CODE["Flair"]
-        flair = self.get_modality_fp(case_name, folder="imagesTr", mri_code=code)
-        flair = self.prepocess_brats_modality(flair)
+        # preprocess Flair modality
+        FLAIR = self.get_modality_fp(case_name, self.MRI_TYPE[0])
+        flair = self.preprocess_brats_modality(data_fp=FLAIR, is_label=False)
+        flair_transv = flair.swapaxes(1, 3)  # transverse plane
 
-        code = self.MRI_CODE["T1w"]
-        t1w = self.get_modality_fp(case_name, folder="imagesTr", mri_code=code)
-        t1w = self.prepocess_brats_modality(t1w)
+        # # preprocess T1 modality
+        # T1 = self.get_modality_fp(case_name, self.MRI_TYPE[1])
+        # t1 = self.preprocess_brats_modality(data_fp=T1, is_label=False)
+        # t1_transv = t1.swapaxes(1, 3) # transverse plane
 
-        code = self.MRI_CODE["T1gd"]
-        t1gd = self.get_modality_fp(case_name, folder="imagesTr", mri_code=code)
-        t1gd = self.prepocess_brats_modality(t1gd)
+        # preprocess T1ce modality
+        T1ce = self.get_modality_fp(case_name, self.MRI_TYPE[2])
+        t1ce = self.preprocess_brats_modality(data_fp=T1ce, is_label=False)
+        t1ce_transv = t1ce.swapaxes(1, 3)  # transverse plane
 
-        code = self.MRI_CODE["T2w"]
-        t2w = self.get_modality_fp(case_name, folder="imagesTr", mri_code=code)
-        t2w = self.prepocess_brats_modality(t2w)
+        # preprocess T2
+        T2 = self.get_modality_fp(case_name, self.MRI_TYPE[3])
+        t2 = self.preprocess_brats_modality(data_fp=T2, is_label=False)
+        t2_transv = t2.swapaxes(1, 3)  # transverse plane
 
-        code = self.MRI_CODE["label"]
-        label = self.get_modality_fp(case_name, folder="labelsTr", mri_code=code)
-        label = self.prepocess_brats_modality(label, label_flag=True)
+        # preprocess segmentation label
+        Label = self.get_modality_fp(case_name, self.MRI_TYPE[4])
+        label = self.preprocess_brats_modality(data_fp=Label, is_label=True)
+        label_transv = label.swapaxes(1, 3)  # transverse plane
 
-        modalities = torch.cat([flair, t1w, t1gd, t2w], dim=0)
-
+        # stack modalities along the first dimension
+        modalities = np.concatenate(
+            (flair_transv, t1ce_transv, t2_transv),
+            axis=0,
+        )
+        label = label_transv
         return modalities, label, case_name
+
+    def __call__(self):
+        print("started preprocessing brats2018...")
+        with Pool(processes=os.cpu_count()) as multi_p:
+            multi_p.map_async(func=self.process, iterable=range(self.__len__()))
+            multi_p.close()
+            multi_p.join()
+        print("finished preprocessing brats2018...")
+
+    def process(self, idx):
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
+        # get the 4D modalities along with the label
+        modalities, label, case_name = self.__getitem__(idx)
+        # creating the folder for the current case id
+        data_save_path = os.path.join(self.save_dir, case_name)
+        if not os.path.exists(data_save_path):
+            os.makedirs(data_save_path)
+        # saving the preprocessed 4D modalities containing all the modalities to save path
+        modalities_fn = data_save_path + f"/{case_name}_modalities.pt"
+        torch.save(modalities, modalities_fn)
+        # saving the preprocessed segmentation label to save path
+        label_fn = data_save_path + f"/{case_name}_label.pt"
+        torch.save(label, label_fn)
+
+
+def val_subset_from_train_data(train_dir, val_dir):
+    """
+    move some of the training data to validation data
+    train_dir: path to the training data
+    val_dir: path to the validation data
+    """
+    os.makedirs(val_dir, exist_ok=True)
+    print(len(os.listdir(train_dir)))
+    train_case_names = next(os.walk(train_dir), (None, None, []))[1]
+    # move 15% of the training data to the validation data
+    val_case_names = np.random.choice(
+        train_case_names, int(0.15 * len(train_case_names)), replace=False
+    )
+    for case_name in val_case_names:
+        os.rename(os.path.join(train_dir, case_name), os.path.join(val_dir, case_name))
+
+    print(len(os.listdir(train_dir)))
+    print(len(os.listdir(val_dir)))
 
 
 if __name__ == "__main__":
     file_path = os.path.abspath(__file__)
-    parent_path = os.path.dirname(file_path)
-    grand_parent_path = os.path.dirname(parent_path)
+    parent_dir = os.path.dirname(file_path)
+    grandparent_dir = os.path.dirname(parent_dir)
+    data_dir = os.path.join(grandparent_dir, "data3D")
+    save_dir = os.path.join(grandparent_dir, "preproc_data")
 
-    train_path = os.path.join(grand_parent_path, "data3D", "train_data")
-    validation_path = os.path.join(grand_parent_path, "data3D", "val_data")
-
-    save_path_train_vol = os.path.join(train_path, "volumes")
-    save_path_val_vol = os.path.join(validation_path, "volumes")
-
-    save_path_train_label = os.path.join(train_path, "segmentations")
-    save_path_val_label = os.path.join(validation_path, "segmentations")
-
-    if not os.path.exists(save_path_train_vol):
-        os.makedirs(save_path_train_vol)
-
-    if not os.path.exists(save_path_val_vol):
-        os.makedirs(save_path_val_vol)
-
-    if not os.path.exists(save_path_train_label):
-        os.makedirs(save_path_train_label)
-
-    if not os.path.exists(save_path_val_label):
-        os.makedirs(save_path_val_label)
-
-    brats2018_train = Brats2018Preprocess(
-        data_dir=train_path,
-        folder_name="train",
-        save_dir_vol=save_path_train_vol,
-        save_dir_label=save_path_train_label,
+    brats2018TrainDataPreprocessor = Brats2018Preprocessor(
+        data_dir=data_dir,
+        split_folder_name="train_data",
+        save_dir=save_dir,
     )
+    # run the preprocessing pipeline
+    brats2018TrainDataPreprocessor()
 
-    brats2018_val = Brats2018Preprocess(
-        data_dir=validation_path,
-        folder_name="val",
-        save_dir_vol=save_path_val_vol,
-        save_dir_label=save_path_val_label,
+    val_subset_from_train_data(
+        os.path.join(save_dir, "train_data"), os.path.join(save_dir, "val_data")
     )
-
-    # Loop through all training cases and save them as .pt files
-    for idx in range(len(brats2018_train)):
-        brats2018_train.save_as_pt(idx)
-
-    # Loop through all validation cases and save them as .pt files
-    for idx in range(len(brats2018_val)):
-        brats2018_val.save_as_pt(idx)
