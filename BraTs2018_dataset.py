@@ -47,4 +47,4 @@ class Brats2018Dataset(Dataset):
         if self.transform:
             data = self.transform(data)
 
-        return data
+        return data #Data needs to be a dictionary for MONAI to work

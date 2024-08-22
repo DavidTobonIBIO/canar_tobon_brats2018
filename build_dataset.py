@@ -1,47 +1,48 @@
+import torch
 from typing import Dict
 from monai.data import DataLoader
-from augmentations.augmentations import build_augmentations
+from utils.augmentations import build_augmentations
+from argument_parser import parser
+
+args = parser.parse_args()
+if args.cuda:
+    torch.cuda.manual_seed(args.seed)
+
+device = torch.device("cuda" if args.cuda else "cpu")
+kwargs = {"num_workers": 8, "pin_memory": True} if args.cuda else {}
+
 
 
 ######################################################################
-def build_dataset(dataset_type: str, dataset_args: Dict):
+def build_dataset(dataset_type: str, root_dir : str, is_train: bool):
     if dataset_type == "brats2018_seg":
         from BraTs2018_dataset import Brats2018Dataset
 
         dataset = Brats2018Dataset(
-            root_dir=dataset_args["root"],
-            is_train=dataset_args["train"],
-            transform=build_augmentations(dataset_args["train"]),
-            fold_id=dataset_args["fold_id"],
+            root_dir=root_dir,
+            is_train=is_train,
+            transform=build_augmentations(train=is_train),
         )
         return dataset
     else:
         raise ValueError(
-            "only brats2021 and brats2017 segmentation is currently supported!"
+            "only brats2018 dataset is supported."
         )
 
 
 ######################################################################
-def build_dataloader(
-    dataset, dataloader_args: Dict, config: Dict = None, train: bool = True
-) -> DataLoader:
-    """builds the dataloader for given dataset
+def build_dataloader(dataset) -> DataLoader:
+    """Builds the dataloader for the given dataset.
 
     Args:
-        dataset (_type_): _description_
-        dataloader_args (Dict): _description_
-        config (Dict, optional): _description_. Defaults to None.
-        train (bool, optional): _description_. Defaults to True.
+        dataset (Dataset): The dataset for which the dataloader is being built.
 
     Returns:
-        DataLoader: _description_
+        DataLoader: The dataloader for the specified dataset.
     """
     dataloader = DataLoader(
         dataset=dataset,
-        batch_size=dataloader_args["batch_size"],
-        shuffle=dataloader_args["shuffle"],
-        num_workers=dataloader_args["num_workers"],
-        drop_last=dataloader_args["drop_last"],
-        pin_memory=True,
+        **kwargs  # kwargs are applied directly for CUDA-related settings
     )
     return dataloader
+
