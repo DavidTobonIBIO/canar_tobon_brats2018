@@ -69,3 +69,7 @@ parser.add_argument(
 parser.add_argument(
     '--dataset', type=str, default='brats2018_seg', help='Select the Brats dataset'
 )
+
+parser.add_argument(
+    '--loss', type=str, default='dice', help='Select the loss function'
+)

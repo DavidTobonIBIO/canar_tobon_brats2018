@@ -284,9 +284,16 @@ if __name__ == "__main__":
     
     print("Creating csv files...")
     
-    get_csv_data(os.path.join(save_dir, "train_data"), os.path.join(save_dir, "train_data.csv"))
+    train_save_dir = os.path.join(save_dir, "train_data")
+    val_save_dir = os.path.join(save_dir, "val_data")
     
-    get_csv_data(os.path.join(save_dir, "val_data"), os.path.join(save_dir, "val_data.csv"))
+    if not os.path.exists(train_save_dir):
+        os.makedirs(train_save_dir)
+    if not os.path.exists(val_save_dir):
+        os.makedirs(val_save_dir)
+    
+    get_csv_data(os.path.join(save_dir, "train_data"), os.path.join(train_save_dir, "train_data.csv"))
+    get_csv_data(os.path.join(save_dir, "val_data"), os.path.join(val_save_dir, "val_data.csv"))
     
     
     print("Finished creating csv files...")
