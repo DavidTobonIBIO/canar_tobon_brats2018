@@ -5,12 +5,14 @@ from utils.augmentations import build_augmentations
 from argument_parser import parser
 
 args = parser.parse_args()
+args.cuda = not args.no_cuda and torch.cuda.is_available()
+
+torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 device = torch.device("cuda" if args.cuda else "cpu")
 kwargs = {"num_workers": 8, "pin_memory": True} if args.cuda else {}
-
 
 
 ######################################################################

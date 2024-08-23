@@ -63,13 +63,9 @@ parser.add_argument(
     "--wandb", action="store_true", default=False, help="use wandb for logging"
 )
 parser.add_argument(
-    "--file", type=str, default="segformer_baseline.pt", help="file to use for prediction, remember to put .pt at the end."
+    "--file", type=str, default="segformer3D_baseline.pt", help="file to use for prediction, remember to put .pt at the end."
 )
 
 parser.add_argument(
-    '--seg-num', type=int, default=0, help='Number of pretrained model of SegFormer'
-)
-
-parser.add_argument(
-    '--dataset', type=int, default=0, help='Select  dataset number'
+    '--dataset', type=str, default='brats2018_seg', help='Select the Brats dataset'
 )
