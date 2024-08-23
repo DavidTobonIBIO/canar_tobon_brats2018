@@ -11,6 +11,9 @@ from utils.losses import build_loss_fn
 from build_dataset import build_dataset, build_dataloader
 from model import build_segformer3d_model
 from argument_parser import parser
+from utils.metrics import build_metric_fn
+from utils.augmentations import build_augmentations
+from trainer import Segmentation_TrainerBrats2018
 
 
 # Parse arguments
@@ -57,4 +60,28 @@ config_dict = yaml.load(open(config_path, 'r'), Loader=yaml.FullLoader)
 
 model = build_segformer3d_model(config=config_dict)
 model.to(device) #Model sent to device, is loaded correctly :)
+
+
+#Model parameters
+
+optimizer = optim.Adam(model.parameters(), lr=args.lr)
+criteria = build_loss_fn(args.loss)
+warmup_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.gamma)
+training_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.gamma)
+
+
+#FIXME start looking at the trainer.py file for the next steps
+
+trainer = Segmentation_TrainerBrats2018(config=config_dict,
+                                        model=model, 
+                                        optimizer=optimizer,
+                                        criterion=criteria,
+                                        train_dataloader=train_loader,
+                                        val_dataloader=valid_loader,
+                                        warmup_scheduler=warmup_scheduler,
+                                        training_scheduler=training_scheduler,
+                                        accelerator=None)
+
+
+trainer.train()
 
