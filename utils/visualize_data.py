@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 import numpy as np
 import torch
+from tqdm import tqdm
 
 
 def animate(input_1, input_2):
@@ -31,8 +32,8 @@ def animate(input_1, input_2):
         im_1 = axis[0].imshow(input_1[i], cmap="gray", animated=True)
         im_2 = axis[1].imshow(input_2[i], cmap="gray", animated=True)
         if i == 0:
-            axis[0].imshow(input_1[i], cmap="gray")  # show an initial one first
-            axis[1].imshow(input_2[i], cmap="gray")  # show an initial one first
+            axis[0].imshow(input_1[i], cmap="gray")
+            axis[1].imshow(input_2[i], cmap="gray")
 
         sequence.append([im_1, im_2])
     return animation.ArtistAnimation(
@@ -44,7 +45,7 @@ def animate(input_1, input_2):
     )
 
 
-def viz_animation(volume_indx: int = 1, label_indx: int = 1) -> None:
+def viz_animation(volume_indx: int, label_indx: int) -> None:
     """
     pair visualization of the volume and label
     volume_indx: index for the volume. ["flair", "t1", "t1ce", "t2"]
@@ -83,7 +84,7 @@ def get_max_slice(label) -> int:
     return max_slice_idx
 
 
-def viz_figure(volume_indx: int = 1, label_indx: int = 1) -> None:
+def viz_figure(volume_indx: int, label_indx: int) -> None:
     """
     pair visualization of the volume and label
     volume_indx: index for the volume. ["flair", "t1", "t1ce", "t2"]
@@ -91,6 +92,7 @@ def viz_figure(volume_indx: int = 1, label_indx: int = 1) -> None:
     """
     assert volume_indx in [0, 1, 2]
     assert label_indx in [0, 1, 2]
+
     x = volume[volume_indx, ...]
     y = label[label_indx, ...]
     slice_idx = get_max_slice(y)
@@ -104,7 +106,45 @@ def viz_figure(volume_indx: int = 1, label_indx: int = 1) -> None:
     plt.savefig(
         os.path.join(
             visualizations_dir,
-            f"brats_{idx}_slice_{slice_idx}_vol{volume_indx}_label{label_indx}  .png",
+            f"brats_{idx}_slice_{slice_idx}_vol{volume_indx}_label{label_indx}.png",
+        )
+    )
+
+
+def viz_figure_all_labels(volume_indx: int, labels_vol) -> None:
+    """
+    pair visualization of the volume and all labels
+    volume_indx: index for the volume. ["flair", "t1", "t1ce", "t2"]
+    label_indx: index for the label segmentation ["TC" (Tumor core), "WT" (Whole tumor), "ET" (Enhancing tumor)]
+    """
+    assert volume_indx in [0, 1, 2]
+
+    x = volume[volume_indx, ...]
+    y = labels_vol[1, ...]
+    slice_idx = get_max_slice(y)
+
+    fig, axis = plt.subplots(1, 2, figsize=(8, 4))
+
+    img = np.copy(x[slice_idx])
+    img = np.repeat(img[:, :, np.newaxis], 3, axis=2)
+    colors = [(0, 255, 255), (255, 255, 0), (255, 0, 0)]
+
+    label_order = [1, 0, 2]
+    for i in label_order:
+        color = colors[i]
+        label = labels_vol[i, ...]
+        img[label[slice_idx] == True] = color
+
+    axis[0].imshow(x[slice_idx], cmap="gray")
+    axis[1].imshow(img)
+    axis[0].axis("off")
+    axis[1].axis("off")
+    plt.tight_layout()
+    plt.show()
+    plt.savefig(
+        os.path.join(
+            visualizations_dir,
+            f"brats_{idx}_slice_{slice_idx}_vol{volume_indx}.png",
         )
     )
 
@@ -131,16 +171,25 @@ if __name__ == "__main__":
     data_dir = os.path.join(grandparent_dir, "preproc_data", "val_data")
     cases = os.listdir(data_dir)
 
-    random.seed(33)
+    for idx in tqdm(range(len(cases))):
 
-    idx = random.randint(0, len(cases))
-    volume = load_volume(os.path.join(data_dir, cases[idx]))
-    label = load_label(os.path.join(data_dir, cases[idx]))
+        # idx = random.randint(0, len(cases))
+        volume = load_volume(os.path.join(data_dir, cases[idx]))
+        label = load_label(os.path.join(data_dir, cases[idx]))
 
-    for i in range(3):
+        for i in range(3):
+            visualizations_dir = os.path.join(
+                grandparent_dir,
+                "visualizations",
+                "data",
+                f"{idx}_{cases[idx]}",
+                f"label_{i}",
+            )
+            os.makedirs(visualizations_dir, exist_ok=True)
+            viz_animation(volume_indx=1, label_indx=i)
+            viz_figure(volume_indx=1, label_indx=i)
+
         visualizations_dir = os.path.join(
-            grandparent_dir, "visualizations", "data", f"{idx}_{cases[idx]}", f"label_{i}"
+            grandparent_dir, "visualizations", "data", f"{idx}_{cases[idx]}"
         )
-        os.makedirs(visualizations_dir, exist_ok=True)
-        viz_animation(volume_indx=1, label_indx=i)
-        viz_figure(volume_indx=1, label_indx=i)
+        viz_figure_all_labels(volume_indx=1, labels_vol=label)
