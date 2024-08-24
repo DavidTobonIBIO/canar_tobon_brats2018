@@ -5,6 +5,7 @@ from torch import nn
 from einops import rearrange
 from functools import partial
 
+
 def build_segformer3d_model(config=None):
     model = SegFormer3D(
         in_channels=config["model_parameters"]["in_channels"],
@@ -100,12 +101,13 @@ class SegFormer3D(nn.Module):
             if m.bias is not None:
                 m.bias.data.zero_()
         elif isinstance(m, nn.Conv3d):
-            fan_out = m.kernel_size[0] * m.kernel_size[1] * m.kernel_size[2] * m.out_channels
+            fan_out = (
+                m.kernel_size[0] * m.kernel_size[1] * m.kernel_size[2] * m.out_channels
+            )
             fan_out //= m.groups
             m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
             if m.bias is not None:
                 m.bias.data.zero_()
-
 
     def forward(self, x):
         # embedding the input
@@ -118,7 +120,8 @@ class SegFormer3D(nn.Module):
         # decoding the embedded features
         x = self.segformer_decoder(c1, c2, c3, c4)
         return x
-    
+
+
 # ----------------------------------------------------- encoder -----------------------------------------------------
 class PatchEmbedding(nn.Module):
     def __init__(
@@ -489,10 +492,11 @@ class DWConv(nn.Module):
         x = x.flatten(2).transpose(1, 2)
         return x
 
+
 ###################################################################################
 def cube_root(n):
     return round(math.pow(n, (1 / 3)))
-    
+
 
 ###################################################################################
 # ----------------------------------------------------- decoder -------------------
@@ -575,7 +579,7 @@ class SegFormerDecoderHead(nn.Module):
         )
 
     def forward(self, c1, c2, c3, c4):
-       ############## _MLP decoder on C1-C4 ###########
+        ############## _MLP decoder on C1-C4 ###########
         n, _, _, _, _ = c4.shape
 
         _c4 = (
@@ -630,6 +634,7 @@ class SegFormerDecoderHead(nn.Module):
         x = self.linear_pred(x)
         x = self.upsample_volume(x)
         return x
+
 
 ###################################################################################
 if __name__ == "__main__":

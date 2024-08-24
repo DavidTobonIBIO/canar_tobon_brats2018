@@ -54,7 +54,10 @@ parser.add_argument(
     help="how many batches to wait before " "logging training status",
 )
 parser.add_argument(
-    "--model", type=str, default="segformer_pretrained", help="model to use (default: segformer)"
+    "--model",
+    type=str,
+    default="segformer_pretrained",
+    help="model to use (default: segformer)",
 )
 parser.add_argument(
     "--save", type=str, default="model.pt", help="file on which to save model weights"
@@ -63,13 +66,14 @@ parser.add_argument(
     "--wandb", action="store_true", default=False, help="use wandb for logging"
 )
 parser.add_argument(
-    "--file", type=str, default="segformer3D_baseline.pt", help="file to use for prediction, remember to put .pt at the end."
+    "--file",
+    type=str,
+    default="segformer3D_baseline.pt",
+    help="file to use for prediction, remember to put .pt at the end.",
 )
 
 parser.add_argument(
-    '--dataset', type=str, default='brats2018_seg', help='Select the Brats dataset'
+    "--dataset", type=str, default="brats2018_seg", help="Select the Brats dataset"
 )
 
-parser.add_argument(
-    '--loss', type=str, default='dice', help='Select the loss function'
-)
+parser.add_argument("--loss", type=str, default="dice", help="Select the loss function")

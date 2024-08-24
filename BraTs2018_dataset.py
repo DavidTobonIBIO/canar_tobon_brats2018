@@ -19,7 +19,7 @@ class Brats2018Dataset(Dataset):
         transform: composition of the pytorch transforms
         """
         super().__init__()
- 
+
         if is_train:
             csv_fp = os.path.join(root_dir, "train_data.csv")
         else:
@@ -36,15 +36,18 @@ class Brats2018Dataset(Dataset):
         case_name = self.csv["case_name"][idx]
         # e.g, BRATS_001_modalities.pt
         # e.g, BRATS_001_label.pt
-                
+
         volume_fp = os.path.join(data_path, f"{case_name}_modalities.pt")
         label_fp = os.path.join(data_path, f"{case_name}_label.pt")
         # load the preprocessed tensors
         volume = torch.load(volume_fp)
         label = torch.load(label_fp)
-        data = {"image": torch.from_numpy(volume).float(), "label": torch.from_numpy(label).float()}
+        data = {
+            "image": torch.from_numpy(volume).float(),
+            "label": torch.from_numpy(label).float(),
+        }
 
         if self.transform:
             data = self.transform(data)
 
-        return data #Data needs to be a dictionary for MONAI to work
+        return data  # Data needs to be a dictionary for MONAI to work

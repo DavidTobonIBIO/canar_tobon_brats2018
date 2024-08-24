@@ -16,7 +16,7 @@ kwargs = {"num_workers": 8, "pin_memory": True} if args.cuda else {}
 
 
 ######################################################################
-def build_dataset(dataset_type: str, root_dir : str, is_train: bool):
+def build_dataset(dataset_type: str, root_dir: str, is_train: bool):
     if dataset_type == "brats2018_seg":
         from BraTs2018_dataset import Brats2018Dataset
 
@@ -27,9 +27,7 @@ def build_dataset(dataset_type: str, root_dir : str, is_train: bool):
         )
         return dataset
     else:
-        raise ValueError(
-            "only brats2018 dataset is supported."
-        )
+        raise ValueError("only brats2018 dataset is supported.")
 
 
 ######################################################################
@@ -47,4 +45,3 @@ def build_dataloader(dataset) -> DataLoader:
         **kwargs  # kwargs are applied directly for CUDA-related settings
     )
     return dataloader
-
