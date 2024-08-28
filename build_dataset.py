@@ -1,6 +1,8 @@
 import torch
-from typing import Dict
+from torch.utils.data.distributed import DistributedSampler
+
 from monai.data import DataLoader
+
 from utils.augmentations import build_augmentations
 from argument_parser import parser
 
@@ -42,6 +44,9 @@ def build_dataloader(dataset) -> DataLoader:
     """
     dataloader = DataLoader(
         dataset=dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        sampler=DistributedSampler(dataset) if args.cuda else None,
         **kwargs  # kwargs are applied directly for CUDA-related settings
     )
     return dataloader
