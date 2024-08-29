@@ -72,7 +72,18 @@ def main(rank, world_size, epochs, log_interval):
     criteria = build_loss_fn(args.loss)
     warmup_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.gamma)
     training_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.gamma)
-
+    
+    metrics_dict = {
+        'roi': [128, 128, 128],
+        'sw_batch_size': 4
+    }
+    
+    metrics = build_metric_fn(
+        metric_type='sliding_window_inference',
+        metric_arg=metrics_dict
+    )
+    
+    
     # Initialize the trainer
     trainer_lindo = Brats2018_Trainer(
         config=config_dict,
@@ -82,6 +93,8 @@ def main(rank, world_size, epochs, log_interval):
         criterion=criteria,
         train_loader=train_loader,
         valid_loader=valid_loader,
+        compute_metrics=True,
+        metrics_fn=metrics,
         warmup_scheduler=warmup_scheduler,
         training_scheduler=training_scheduler,
         gpu_id=rank,

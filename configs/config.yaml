@@ -66,10 +66,10 @@ clip_gradients:
 # training hyperparameters
 training_parameters:
   seed: 42
-  num_epochs: 800
-  cutoff_epoch: 400
+  num_epochs: 15
+  cutoff_epoch: 5
   load_optimizer: False
-  print_every: 200
+  print_every: 1
   calculate_metrics: True
   grad_accumulate_steps: 1 # default: 1
   checkpoint_save_dir: "model_checkpoints/best_dice_checkpoint"

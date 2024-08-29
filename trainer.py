@@ -24,11 +24,16 @@ class Brats2018_Trainer:
                  criterion: torch.nn.Module,
                  train_loader: DataLoader,
                  valid_loader: DataLoader,
+                 compute_metrics: bool,
+                 metrics_fn: SlidingWindowInference,
                  warmup_scheduler: torch.optim.lr_scheduler.StepLR,
                  training_scheduler: torch.optim.lr_scheduler.StepLR,
                  gpu_id: int,
                  print_every: int,
                  wandb=False):
+        
+        
+        
         
         self.config = config
         self.train_loader = train_loader
@@ -42,11 +47,8 @@ class Brats2018_Trainer:
         self.print_every = print_every
         self.wandb = wandb
         
-        
-        self.sliding_window_inference = SlidingWindowInference(
-            config["sliding_window_inference"]["roi"],
-            config["sliding_window_inference"]["sw_batch_size"]
-        )
+        self.compute_metrics = compute_metrics
+        self.sliding_window_inference = metrics_fn
         
         self.num_epochs = num_epochs
         
@@ -59,39 +61,31 @@ class Brats2018_Trainer:
         self.epoch_val_dice = 0.0
         self.best_val_dice = 0.0
 
-    def _configure_trainer(self) -> None:
-        self.num_epochs = self.config["training_parameters"]["num_epochs"]
-        self.print_every = self.config["training_parameters"]["print_every"]
-        self.ema_enabled = self.config["ema"]["enabled"]
-        self.val_ema_every = self.config["ema"]["val_ema_every"]
-        self.warmup_enabled = self.config["warmup_scheduler"]["enabled"]
-        self.warmup_epochs = self.config["warmup_scheduler"]["warmup_epochs"]
-        self.cutoff_epoch = self.config["training_parameters"]["cutoff_epoch"]
-        self.calculate_metrics = self.config["training_parameters"]["calculate_metrics"]
-        self.checkpoint_save_dir = self.config["training_parameters"]["checkpoint_save_dir"]
 
     def _train_step(self):
         epoch_avg_loss = 0.0
         self.model.train()
+        with tqdm(total=len(self.train_loader), desc=f"Epoch {self.current_epoch}", unit="batch") as pbar:
+            for idx, raw_data in enumerate(self.train_loader):
+                data = raw_data["image"].to(self.device)
+                labels = raw_data["label"].to(self.device)
+                
+                self.optimizer.zero_grad()
+                preds = self.model(data)
+                loss = self.loss_fn(preds, labels)
+                loss.backward()
+                self.optimizer.step()
+                
+                epoch_avg_loss += loss.item()
+                
+                if idx % self.print_every == 0:
+                    print(f"Epoch {self.current_epoch}, Loss: {loss.item()}")
 
-        for idx, raw_data in enumerate(self.train_loader):
-            data = raw_data["image"].to(self.device)
-            labels = raw_data["label"].to(self.device)
+            epoch_avg_loss /= len(self.train_loader)
+            self.epoch_train_loss = epoch_avg_loss
+            pbar.set_postfix({'train_loss': epoch_avg_loss})
+            pbar.update(1)
             
-            self.optimizer.zero_grad()
-            preds = self.model(data)
-            loss = self.loss_fn(preds, labels)
-            loss.backward()
-            self.optimizer.step()
-            
-            epoch_avg_loss += loss.item()
-            
-            if idx % self.print_every == 0:
-                print(f"Epoch {self.current_epoch}, Loss: {loss.item()}")
-
-        epoch_avg_loss /= len(self.train_loader)
-        self.epoch_train_loss = epoch_avg_loss
-        
         return epoch_avg_loss
 
     def _val_step(self):
@@ -100,22 +94,27 @@ class Brats2018_Trainer:
         self.model.eval()
 
         with torch.no_grad():
-            for idx, raw_data in enumerate(self.valid_loader):
-                data = raw_data["image"].to(self.device)
-                labels = raw_data["label"].to(self.device)
-                
-                preds = self.model(data)
-                loss = self.loss_fn(preds, labels)
-                epoch_avg_loss += loss.item()
+            with tqdm(total=len(self.valid_loader), desc=f"Epoch {self.current_epoch}", unit="batch") as pbar:
+                for idx, raw_data in enumerate(self.valid_loader):
+                    data = raw_data["image"].to(self.device)
+                    labels = raw_data["label"].to(self.device)
+                    
+                    preds = self.model(data)
+                    loss = self.loss_fn(preds, labels)
+                    epoch_avg_loss += loss.item()
 
-                if self.calculate_metrics:
-                    dice = self.sliding_window_inference(data, labels, self.model)
-                    total_dice += dice
+                    if self.compute_metrics:
+                        dice = self.sliding_window_inference(data, labels, self.model)
+                        total_dice += dice
+                    pbar.set_postfix({'val_loss': loss.item()})
+                    pbar.update(1)
         
         epoch_avg_loss /= len(self.valid_loader)
         self.epoch_val_loss = epoch_avg_loss
         
-        if self.calculate_metrics:
+        print(f'Computing Dice Score...')
+        
+        if self.compute_metrics:
             # Aggregate dice score across all GPUs
             total_dice_tensor = torch.tensor(total_dice).to(self.device)
             torch.distributed.all_reduce(total_dice_tensor, op=torch.distributed.ReduceOp.SUM)
@@ -135,11 +134,19 @@ class Brats2018_Trainer:
         for epoch in range(self.current_epoch, self.num_epochs):
             self.current_epoch = epoch
             
+            print(colored(f"Epoch {epoch}", "green"))
+            
+            print("Training...")
+            
             train_loss = self._train_step()
+            
+            print("Validating...")
             val_loss, val_dice = self._val_step()
             
             print(f"Epoch {epoch}, Train Loss: {train_loss}, Val Loss: {val_loss}, Val Dice: {val_dice}")
             
+            print("\n")
+
             self._update_metrics()
             self._log_metrics()
             
@@ -158,7 +165,7 @@ class Brats2018_Trainer:
         if self.epoch_val_loss <= self.best_val_loss:
             self.best_val_loss = self.epoch_val_loss
 
-        if self.calculate_metrics:
+        if self.compute_metrics:
             if self.epoch_val_dice >= self.best_val_dice:
                 self.best_val_dice = self.epoch_val_dice
 
