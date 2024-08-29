@@ -18,6 +18,7 @@ def ddp_setup(rank, world_size, backend="nccl"):
 class Brats2018_Trainer:
     def __init__(self,
                  config: Dict,
+                 num_epochs: int,
                  model: torch.nn.Module,
                  optimizer: torch.optim.Optimizer,
                  criterion: torch.nn.Module,
@@ -41,14 +42,13 @@ class Brats2018_Trainer:
         self.print_every = print_every
         self.wandb = wandb
         
-        # Initialize DistributedDataParallel if using multiple GPUs
-        if torch.cuda.device_count() > 1:
-            self.model = DDP(self.model, device_ids=[gpu_id], output_device=gpu_id)
         
         self.sliding_window_inference = SlidingWindowInference(
             config["sliding_window_inference"]["roi"],
             config["sliding_window_inference"]["sw_batch_size"]
         )
+        
+        self.num_epochs = num_epochs
         
         # Metrics
         self.current_epoch = 0
@@ -116,8 +116,10 @@ class Brats2018_Trainer:
         self.epoch_val_loss = epoch_avg_loss
         
         if self.calculate_metrics:
-            mean_dice = self._calc_dice_metric(data, labels)
-            total_dice += mean_dice
+            # Aggregate dice score across all GPUs
+            total_dice_tensor = torch.tensor(total_dice).to(self.device)
+            torch.distributed.all_reduce(total_dice_tensor, op=torch.distributed.ReduceOp.SUM)
+            total_dice = total_dice_tensor.item() / torch.distributed.get_world_size()
             self.epoch_val_dice = total_dice
         
         return epoch_avg_loss, total_dice
@@ -127,7 +129,7 @@ class Brats2018_Trainer:
         return avg_dice_score
 
     def _run_train_val(self):
-        if self.wandb:
+        if self.wandb and torch.distributed.get_rank() == 0:
             wandb.watch(self.model, criterion=self.loss_fn, log="all", log_freq=10)
         
         for epoch in range(self.current_epoch, self.num_epochs):
@@ -167,7 +169,8 @@ class Brats2018_Trainer:
             "val_loss": self.epoch_val_loss,
             "mean_dice": self.epoch_val_dice,
         }
-        wandb.log(log_data)
+        if torch.distributed.get_rank() == 0:
+            wandb.log(log_data)
     
     def save_checkpoint(self) -> None:
         checkpoint_path = os.path.join(self.checkpoint_save_dir, f"model_epoch_{self.current_epoch}.pth")
