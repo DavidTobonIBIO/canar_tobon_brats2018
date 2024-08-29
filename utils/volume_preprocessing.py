@@ -169,9 +169,9 @@ class Brats2018Preprocessor:
         flair_transv = flair.swapaxes(1, 3)  # transverse plane
 
         # # preprocess T1 modality
-        # T1 = self.get_modality_fp(case_name, self.MRI_TYPE[1])
-        # t1 = self.preprocess_brats_modality(data_fp=T1, is_label=False)
-        # t1_transv = t1.swapaxes(1, 3) # transverse plane
+        T1 = self.get_modality_fp(case_name, self.MRI_TYPE[1])
+        t1 = self.preprocess_brats_modality(data_fp=T1, is_label=False)
+        t1_transv = t1.swapaxes(1, 3) # transverse plane
 
         # preprocess T1ce modality
         T1ce = self.get_modality_fp(case_name, self.MRI_TYPE[2])
@@ -190,7 +190,7 @@ class Brats2018Preprocessor:
 
         # stack modalities along the first dimension
         modalities = np.concatenate(
-            (flair_transv, t1ce_transv, t2_transv),
+            (t1_transv, flair_transv, t1ce_transv, t2_transv),
             axis=0,
         )
         label = label_transv
