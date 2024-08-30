@@ -140,11 +140,9 @@ class Brats2018Trainer:
 
             # Update metrics
 
-            save_train_checkpoint, save_val_checkpoint = self._update_metrics()
-            if save_train_checkpoint:
-                self._save_checkpoint("train")
-            if save_val_checkpoint:
-                self._save_checkpoint("val")
+            save_checkpoint = self._update_metrics()
+            if save_checkpoint:
+                self._save_checkpoint()
 
             if self.wandb:
                 self._log_metrics()
@@ -152,21 +150,20 @@ class Brats2018Trainer:
             self.training_scheduler.step()
 
     def _update_metrics(self) -> tuple[bool, bool]:
-        save_train_checkpoint = False
-        save_val_checkpoint = False
+        save_checkpoint = False
         if self.epoch_train_loss <= self.best_train_loss:
             self.best_train_loss = self.epoch_train_loss
-            save_train_checkpoint = True
+            save_checkpoint = True
 
         if self.epoch_val_loss <= self.best_val_loss:
             self.best_val_loss = self.epoch_val_loss
-            save_val_checkpoint = True
+            save_checkpoint = True
 
         if self.compute_metrics:
             if self.epoch_val_dice >= self.best_val_dice:
                 self.best_val_dice = self.epoch_val_dice
 
-        return save_train_checkpoint or save_val_checkpoint
+        return save_checkpoint
 
     def _log_metrics(self) -> None:
         log_data = {
