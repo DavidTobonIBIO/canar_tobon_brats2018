@@ -48,3 +48,35 @@ metrics_fn = build_metric_fn(
 )
 
 model.eval()
+
+avg_dice = 0.0
+
+with torch.no_grad():
+    with tqdm(
+            total=len(valid_loader), desc="Validation", unit="batch"
+        ) as pbar:
+        for idx, raw_data in enumerate(valid_loader):
+                    data = raw_data["image"].to(device)
+                    labels = raw_data["label"].to(device)
+
+                    preds = model(data)
+
+                    dice = metrics_fn(preds, labels, model=model)
+                    avg_dice += dice
+
+                    pbar.set_postfix(
+                        {
+                            "val_loss": loss.item() / (idx + 1),
+                            "val_dice": total_dice / (idx + 1),
+                        }
+                    )
+                    pbar.update(1)
+
+                epoch_avg_loss /= len(self.valid_loader)
+
+                if self.compute_metrics:
+                    total_dice /= len(self.valid_loader)
+                    self.epoch_val_dice = total_dice
+
+                self.epoch_val_loss = epoch_avg_loss
+
