@@ -32,9 +32,6 @@ class Brats2018_Trainer:
                  print_every: int,
                  wandb=False):
         
-        
-        
-        
         self.config = config
         self.train_loader = train_loader
         self.valid_loader = valid_loader
@@ -74,6 +71,9 @@ class Brats2018_Trainer:
                 preds = self.model(data)
                 loss = self.loss_fn(preds, labels)
                 loss.backward()
+
+                # Ensure CUDA operations are synchronized before stepping optimizer
+                torch.cuda.synchronize()
                 self.optimizer.step()
                 
                 epoch_avg_loss += loss.item()
@@ -99,6 +99,8 @@ class Brats2018_Trainer:
                     data = raw_data["image"].to(self.device)
                     labels = raw_data["label"].to(self.device)
                     
+                    # Synchronize CUDA before validation step
+                    torch.cuda.synchronize()
                     preds = self.model(data)
                     loss = self.loss_fn(preds, labels)
                     epoch_avg_loss += loss.item()
@@ -106,6 +108,9 @@ class Brats2018_Trainer:
                     if self.compute_metrics:
                         dice = self.sliding_window_inference(data, labels, self.model)
                         total_dice += dice
+
+                    # Synchronize CUDA after each validation step
+                    torch.cuda.synchronize()
                     pbar.set_postfix({'val_loss': loss.item()})
                     pbar.update(1)
         
@@ -122,10 +127,6 @@ class Brats2018_Trainer:
             self.epoch_val_dice = total_dice
         
         return epoch_avg_loss, total_dice
-
-    def _calc_dice_metric(self, data, labels) -> float:
-        avg_dice_score = self.sliding_window_inference(data, labels, self.model)
-        return avg_dice_score
 
     def _run_train_val(self):
         if self.wandb and torch.distributed.get_rank() == 0:
@@ -186,13 +187,14 @@ class Brats2018_Trainer:
                 "epoch": self.current_epoch,
                 "model_state_dict": self.model.state_dict(),
                 "optimizer_state_dict": self.optimizer.state_dict(),
-                "train_loss": self.epoch_train_loss,
-                "val_loss": self.epoch_val_loss,
-                "mean_dice": self.epoch_val_dice,
+                "best_val_loss": self.best_val_loss,
+                "best_val_dice": self.best_val_dice,
             },
             checkpoint_path,
         )
-    
+
     def train(self) -> None:
+        print("Starting training...")
         self._run_train_val()
+        print("Training complete. Cleaning up...")
         destroy_process_group()

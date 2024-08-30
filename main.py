@@ -75,7 +75,7 @@ def main(rank, world_size, epochs, log_interval):
     
     metrics_dict = {
         'roi': [128, 128, 128],
-        'sw_batch_size': 4
+        'sw_batch_size': 2
     }
     
     metrics = build_metric_fn(
