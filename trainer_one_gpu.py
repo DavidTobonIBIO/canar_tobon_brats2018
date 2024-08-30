@@ -6,7 +6,7 @@ from typing import Dict
 from termcolor import colored
 from torch.utils.data import DataLoader
 
-from utils.segmentation_metrics import SlidingWindowInference  # TODO asterico
+from utils.segmentation_metrics import SlidingWindowInference
 
 
 class Brats2018Trainer:
