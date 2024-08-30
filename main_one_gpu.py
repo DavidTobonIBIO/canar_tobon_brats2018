@@ -4,7 +4,7 @@ import wandb
 import torch
 import torch.optim as optim
 from utils.losses import build_loss_fn
-from build_dataset import build_dataset, build_dataloader
+from build_dataset_one_gpu import build_dataset, build_dataloader
 from model import build_segformer3d_model
 from argument_parser import parser
 from utils.metrics import build_metric_fn
