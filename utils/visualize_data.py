@@ -45,7 +45,7 @@ def animate(input_1, input_2):
     )
 
 
-def viz_animation(volume_indx: int, label_indx: int) -> None:
+def viz_animation(volume_indx: int, label_indx: int, volume, label) -> None:
     """
     pair visualization of the volume and label
     volume_indx: index for the volume. ["flair", "t1", "t1ce", "t2"]
@@ -84,7 +84,7 @@ def get_max_slice(label) -> int:
     return max_slice_idx
 
 
-def viz_figure(volume_indx: int, label_indx: int) -> None:
+def viz_figure(volume_indx: int, label_indx: int, volume, label) -> None:
     """
     pair visualization of the volume and label
     volume_indx: index for the volume. ["flair", "t1", "t1ce", "t2"]
@@ -186,8 +186,8 @@ if __name__ == "__main__":
                 f"label_{i}",
             )
             os.makedirs(visualizations_dir, exist_ok=True)
-            viz_animation(volume_indx=1, label_indx=i)
-            viz_figure(volume_indx=1, label_indx=i)
+            viz_animation(volume_indx=1, label_indx=i, volume=volume, label=label)
+            viz_figure(volume_indx=1, label_indx=i, volume=volume, label=label)
 
         visualizations_dir = os.path.join(
             grandparent_dir, "visualizations", "data", f"{idx}_{cases[idx]}"
