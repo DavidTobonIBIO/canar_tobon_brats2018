@@ -7,22 +7,6 @@ from monai.data import decollate_batch
 from monai.transforms import Activations, AsDiscrete
 from monai.inferers import sliding_window_inference
 
-import torch
-import torch.nn as nn
-from typing import Dict
-from monai.metrics import DiceMetric
-from monai.transforms import Compose, Activations, AsDiscrete
-from monai.data import decollate_batch
-from monai.inferers import sliding_window_inference
-
-import torch
-import torch.nn as nn
-from typing import Dict
-from monai.metrics import DiceMetric
-from monai.transforms import Compose, Activations, AsDiscrete
-from monai.data import decollate_batch
-from monai.inferers import sliding_window_inference
-
 class SlidingWindowInference:
     def __init__(self, roi: tuple, sw_batch_size: int):
         self.dice_metric = DiceMetric(

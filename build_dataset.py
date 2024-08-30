@@ -14,7 +14,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 device = torch.device("cuda" if args.cuda else "cpu")
-kwargs = {"num_workers": 8, "pin_memory": True} if args.cuda else {}
+kwargs = {"num_workers": 0, "pin_memory": True} if args.cuda else {}
 
 
 ######################################################################
