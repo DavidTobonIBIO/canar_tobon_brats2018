@@ -84,3 +84,10 @@ parser.add_argument(
     '--rank', type=int, default=0,help='rank of the process'
 )
 
+parser.add_argument(
+    "--pretrained", type=str, default="", help="Select the pretrained model"
+)
+
+parser.add_argument(
+    "--compute-metrics", action="store_true", default=False, help="Compute metrics"
+)
