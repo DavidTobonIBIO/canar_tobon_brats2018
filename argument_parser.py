@@ -76,13 +76,9 @@ parser.add_argument(
     "--dataset", type=str, default="brats2018_seg", help="Select the Brats dataset"
 )
 
-parser.add_argument(
-    "--loss", type=str, default="dice", help="Select the loss function"
-)
+parser.add_argument("--loss", type=str, default="dice", help="Select the loss function")
 
-parser.add_argument(
-    '--rank', type=int, default=0,help='rank of the process'
-)
+parser.add_argument("--rank", type=int, default=0, help="rank of the process")
 
 parser.add_argument(
     "--pretrained", type=str, default="", help="Select the pretrained model"

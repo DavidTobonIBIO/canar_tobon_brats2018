@@ -10,7 +10,7 @@ from build_dataset import build_dataset, build_dataloader
 from model import build_segformer3d_model
 from argument_parser import parser
 from utils.metrics import build_metric_fn
-from trainer_lindo import Brats2018Trainer
+from trainer import Brats2018Trainer
 
 args = parser.parse_args()
 

@@ -55,6 +55,7 @@ metrics_fn = build_metric_fn(
 
 model.eval()
 
+
 def calculate_avg_dice():
     avg_dice = 0.0
 
@@ -79,7 +80,8 @@ def calculate_avg_dice():
 
     print(f"Average Dice: {avg_dice}")
 
-if args.compute_metrics: 
+
+if args.compute_metrics:
     calculate_avg_dice()
 
 raw_data = next(iter(valid_loader))

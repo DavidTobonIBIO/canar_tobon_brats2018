@@ -171,7 +171,7 @@ class Brats2018Preprocessor:
         # # preprocess T1 modality
         T1 = self.get_modality_fp(case_name, self.MRI_TYPE[1])
         t1 = self.preprocess_brats_modality(data_fp=T1, is_label=False)
-        t1_transv = t1.swapaxes(1, 3) # transverse plane
+        t1_transv = t1.swapaxes(1, 3)  # transverse plane
 
         # preprocess T1ce modality
         T1ce = self.get_modality_fp(case_name, self.MRI_TYPE[2])
@@ -240,27 +240,23 @@ def val_subset_from_train_data(train_dir, val_dir):
     print(len(os.listdir(train_dir)))
     print(len(os.listdir(val_dir)))
 
+
 def get_csv_data(data_dir, save_dir):
     """
     get the data from the preprocessed data and save it to a csv file
     data_dir: path to the preprocessed data
     save_dir: path to save the csv file
     """
-    
+
     case_lt = sorted(next(os.walk(data_dir), (None, None, []))[1])
     paths_cases = [os.path.join(data_dir, case) for case in case_lt]
-    
-    df = pd.DataFrame({
-        'data_path': paths_cases,
-        'case_name': case_lt
-    })
+
+    df = pd.DataFrame({"data_path": paths_cases, "case_name": case_lt})
 
     df.to_csv(save_dir, index=False)
-    
+
     return None
-    
-    
-    
+
 
 if __name__ == "__main__":
     file_path = os.path.abspath(__file__)
@@ -280,23 +276,25 @@ if __name__ == "__main__":
     val_subset_from_train_data(
         os.path.join(save_dir, "train_data"), os.path.join(save_dir, "val_data")
     )
-    
-    
+
     print("Creating csv files...")
-    
+
     train_save_dir = os.path.join(save_dir, "train_data")
     val_save_dir = os.path.join(save_dir, "val_data")
-    
+
     if not os.path.exists(train_save_dir):
         os.makedirs(train_save_dir)
     if not os.path.exists(val_save_dir):
         os.makedirs(val_save_dir)
-    
-    get_csv_data(os.path.join(save_dir, "train_data"), os.path.join(train_save_dir, "train_data.csv"))
-    get_csv_data(os.path.join(save_dir, "val_data"), os.path.join(val_save_dir, "val_data.csv"))
-    
-    
+
+    get_csv_data(
+        os.path.join(save_dir, "train_data"),
+        os.path.join(train_save_dir, "train_data.csv"),
+    )
+    get_csv_data(
+        os.path.join(save_dir, "val_data"), os.path.join(val_save_dir, "val_data.csv")
+    )
+
     print("Finished creating csv files...")
-    
+
     print("Preprocessing finished...")
-    

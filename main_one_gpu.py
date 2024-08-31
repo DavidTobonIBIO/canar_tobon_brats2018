@@ -52,7 +52,7 @@ def main(epochs, log_interval):
 
     train_loader = build_dataloader(train_dataset)
     valid_loader = build_dataloader(valid_dataset)
-    
+
     # Load the configuration file
     config_path = os.path.join(file_path, "configs", "config.yaml")
     config_dict = yaml.load(open(config_path, "r"), Loader=yaml.FullLoader)
@@ -67,7 +67,9 @@ def main(epochs, log_interval):
             model.load_state_dict(state_dict)
             model.to(device)
         else:
-            model_info_dict = torch.load(os.path.join(file_path, "models", args.pretrained))
+            model_info_dict = torch.load(
+                os.path.join(file_path, "models", args.pretrained)
+            )
             state_dict = model_info_dict["model_state_dict"]
             model = SegFormer3D()
             model.load_state_dict(state_dict)

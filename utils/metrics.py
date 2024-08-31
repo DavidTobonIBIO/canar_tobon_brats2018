@@ -7,6 +7,7 @@ from monai.data import decollate_batch
 from monai.transforms import Activations, AsDiscrete
 from monai.inferers import sliding_window_inference
 
+
 class SlidingWindowInference:
     def __init__(self, roi: tuple, sw_batch_size: int):
         self.dice_metric = DiceMetric(
@@ -21,14 +22,18 @@ class SlidingWindowInference:
         self.sw_batch_size = sw_batch_size
         self.roi = roi
 
-    def __call__(self, val_inputs: torch.Tensor, val_labels: torch.Tensor, model: nn.Module):
+    def __call__(
+        self, val_inputs: torch.Tensor, val_labels: torch.Tensor, model: nn.Module
+    ):
         try:
             # Reset dice metric for the new batch
             print("Resetting Dice metric...")
             self.dice_metric.reset()
 
             # Perform sliding window inference
-            print(f"Performing sliding window inference with ROI size: {self.roi} and SW batch size: {self.sw_batch_size}")
+            print(
+                f"Performing sliding window inference with ROI size: {self.roi} and SW batch size: {self.sw_batch_size}"
+            )
             logits = sliding_window_inference(
                 inputs=val_inputs,
                 roi_size=self.roi,
@@ -51,7 +56,8 @@ class SlidingWindowInference:
             # Debugging post-processed predictions
             print("Post-processing predictions...")
             val_output_convert = [
-                self.post_transform(val_pred_tensor) for val_pred_tensor in val_outputs_list
+                self.post_transform(val_pred_tensor)
+                for val_pred_tensor in val_outputs_list
             ]
             print(f"Post-processed predictions count: {len(val_output_convert)}")
 
@@ -69,6 +75,7 @@ class SlidingWindowInference:
         except Exception as e:
             print(f"An error occurred: {e}")
             raise
+
 
 def build_metric_fn(metric_type: str, metric_arg: Dict = None):
     if metric_type == "sliding_window_inference":

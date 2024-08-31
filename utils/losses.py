@@ -2,6 +2,7 @@ import torch.nn as nn
 from typing import Dict
 from monai import losses
 
+
 class CrossEntropyLoss(nn.Module):
     def __init__(self):
         super().__init__()
@@ -21,6 +22,8 @@ class BinaryCrossEntropyWithLogits(nn.Module):
     def forward(self, predictions, tragets):
         loss = self._loss(predictions, tragets)
         return loss
+
+
 ###########################################################################
 class DiceLoss(nn.Module):
     def __init__(self):
@@ -56,6 +59,6 @@ def build_loss_fn(loss_type: str):
 
     elif loss_type == "diceCE":
         return DiceCELoss()
-        
+
     else:
         raise ValueError("must be cross entropy or soft dice loss for now!")
