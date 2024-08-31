@@ -75,7 +75,6 @@ def main(rank, world_size, epochs, log_interval):
     training_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.1)
 
     # Define metrics
-
     metrics_dict = {
         "roi": [128, 128, 128],
         "sw_batch_size": 2,
