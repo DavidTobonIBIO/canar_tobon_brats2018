@@ -101,17 +101,51 @@ print("Data shape: ", data.shape)
 print("Labels shape: ", labels.shape)
 print("Preds shape: ", preds.shape)
 
-idx = get_max_slice(preds[0, 1])
-label = labels[0, 1][idx]
-pred = preds[0, 1][idx]
 
-fig, axis = plt.subplots(1, 2, figsize=(10, 5))
+fig, axis = plt.subplots(args.batch_size, 3, figsize=(12, 9))
 
-axis[0].imshow(label, cmap="gray")
-axis[1].imshow(pred, cmap="gray")
-axis[0].axis("off")
-axis[1].axis("off")
+axis[0, 0].set_title("MRI Slice")
+axis[0, 1].set_title("Ground Truth")
+axis[0, 2].set_title("Prediction")
+
+tc_label_idx = 0
+wt_label_idx = 1
+et_label_idx = 2
+flair_vol_idx = 0
+
+for i in range(args.batch_size):
+    label = labels[i, ...]
+    pred = preds[i, ...]
+    max_slice_idx = get_max_slice(label[wt_label_idx])
+    
+    axis[i, 0].imshow(data[i, flair_vol_idx, max_slice_idx], cmap="gray")
+    
+    labeled_img = np.copy(data[i, flair_vol_idx, max_slice_idx])
+    labeled_img = np.repeat(labeled_img[:, :, np.newaxis], 3, axis=2)
+
+    colors = [(0, 255, 255), (255, 255, 0), (255, 0, 0)]
+    label_order = [1, 0, 2]
+    for i in label_order:
+        color = colors[i]
+        l = label[i, ...]
+        labeled_img[l[max_slice_idx] == True] = color
+    
+    axis[i, 1].imshow(labeled_img)
+    
+    preds_img = np.copy(data[i, flair_vol_idx, max_slice_idx])
+    preds_img = np.repeat(preds_img[:, :, np.newaxis], 3, axis=2)
+
+    for i in label_order:
+        color = colors[i]
+        l = pred[i, ...]
+        preds_img[l[max_slice_idx] == True] = color
+        
+    axis[i, 2].imshow(preds_img)
+    
+    axis[i, 0].axis("off")
+    axis[i, 1].axis("off")
+    axis[i, 2].axis("off")
 
 plt.tight_layout()
-
+plt.show()
 plt.savefig(os.path.join(visualizations_dir, "pred.png"))
