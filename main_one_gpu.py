@@ -5,7 +5,7 @@ import torch
 import torch.optim as optim
 from utils.losses import build_loss_fn
 from build_dataset_one_gpu import build_dataset, build_dataloader
-from model import build_segformer3d_model
+from model import build_segformer3d_model, SegFormer3D
 from argument_parser import parser
 from utils.metrics import build_metric_fn
 from trainer_one_gpu import Brats2018Trainer
@@ -52,14 +52,27 @@ def main(epochs, log_interval):
 
     train_loader = build_dataloader(train_dataset)
     valid_loader = build_dataloader(valid_dataset)
-
+    
     # Load the configuration file
     config_path = os.path.join(file_path, "configs", "config.yaml")
     config_dict = yaml.load(open(config_path, "r"), Loader=yaml.FullLoader)
 
-    # Define the model
-    model = build_segformer3d_model(config=config_dict)
-
+    if args.pretrained == "":
+        # Define the model
+        model = build_segformer3d_model(config=config_dict)
+    else:
+        if args.pretrained == "best_segformer3d_brats_performance.pt":
+            state_dict = torch.load(os.path.join(file_path, "models", args.pretrained))
+            model = SegFormer3D()
+            model.load_state_dict(state_dict)
+            model.to(device)
+        else:
+            model_info_dict = torch.load(os.path.join(file_path, "models", args.pretrained))
+            state_dict = model_info_dict["model_state_dict"]
+            model = SegFormer3D()
+            model.load_state_dict(state_dict)
+            model.to(device)
+        print("Weights loaded successfully from", args.pretrained)
     # Model parameters
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = build_loss_fn(args.loss)
