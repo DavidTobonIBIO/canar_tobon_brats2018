@@ -172,8 +172,7 @@ class Brats2018Trainer:
             "val_loss": self.epoch_val_loss,
             "mean_dice": self.epoch_val_dice,
         }
-        if torch.distributed.get_rank() == 0:
-            wandb.log(log_data)
+        wandb.log(log_data)
 
     def _save_checkpoint(self) -> None:
 

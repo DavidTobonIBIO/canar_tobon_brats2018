@@ -23,7 +23,7 @@ def main(epochs, log_interval):
         )
     # Wandb initialization
     if args.wandb:
-        wandb.init(project="3d-segmentation")
+        wandb.init(project="3d-segmentation", name=args.run_name)
         wandb.config.update(args)
 
     # Set random seed
