@@ -62,9 +62,9 @@ class SlidingWindowInference:
 
             print(f"Dice scores per channel: {acc}")
             avg_acc = acc.mean()
-            print(f"Average Dice score: {avg_acc * 100}")
+            print(f"Average Dice score: {avg_acc}")
 
-            return avg_acc * 100
+            return avg_acc
 
         except Exception as e:
             print(f"An error occurred: {e}")

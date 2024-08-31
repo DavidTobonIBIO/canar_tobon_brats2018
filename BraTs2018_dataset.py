@@ -2,6 +2,7 @@ import os
 import torch
 import pandas as pd
 from torch.utils.data import Dataset
+import warnings
 
 
 class Brats2018Dataset(Dataset):
@@ -40,6 +41,9 @@ class Brats2018Dataset(Dataset):
         volume_fp = os.path.join(data_path, f"{case_name}_modalities.pt")
         label_fp = os.path.join(data_path, f"{case_name}_label.pt")
         # load the preprocessed tensors
+
+        # Suppress all warnings
+        warnings.filterwarnings("ignore")
         volume = torch.load(volume_fp)
         label = torch.load(label_fp)
         data = {

@@ -183,7 +183,7 @@ class Brats2018Trainer:
             self.best_val_loss = self.epoch_val_loss
 
         if self.compute_metrics:
-            if self.epoch_val_dice >= self.best_val_dice:
+            if self.epoch_val_dfice >= self.best_val_dice:
                 self.best_val_dice = self.epoch_val_dice
 
     def _log_metrics(self) -> None:

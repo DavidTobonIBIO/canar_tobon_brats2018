@@ -31,7 +31,7 @@ class Brats2018Trainer:
 
         self.train_loader = train_loader
         self.valid_loader = valid_loader
-
+        self.device = device
         self.model = model.to(device)
 
         self.optimizer = optimizer
@@ -102,7 +102,7 @@ class Brats2018Trainer:
                     epoch_avg_loss += loss.item()
 
                     if self.compute_metrics:
-                        dice = self.metrics_fn(preds, labels, model=self.model)
+                        dice = self.metrics_fn(data, labels, model=self.model)
                         total_dice += dice
 
                     pbar.set_postfix(
@@ -175,7 +175,7 @@ class Brats2018Trainer:
         if torch.distributed.get_rank() == 0:
             wandb.log(log_data)
 
-    def _save_checkpoint(self, split: str) -> None:
+    def _save_checkpoint(self) -> None:
 
         torch.save(
             {
@@ -184,7 +184,7 @@ class Brats2018Trainer:
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "loss": self.epoch_train_loss,
             },
-            os.path.join(self.save_path, f"{split}_checkpoint.pt"),
+            self.save_path,
         )
 
     def train(self):
