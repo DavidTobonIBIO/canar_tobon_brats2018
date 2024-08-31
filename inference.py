@@ -125,9 +125,9 @@ for i in range(args.batch_size):
 
     colors = [(0, 255, 255), (255, 255, 0), (255, 0, 0)]
     label_order = [1, 0, 2]
-    for i in label_order:
-        color = colors[i]
-        l = label[i, ...]
+    for j in label_order:
+        color = colors[j]
+        l = label[j, ...]
         labeled_img[l[max_slice_idx] == True] = color
     
     axis[i, 1].imshow(labeled_img)
@@ -135,9 +135,9 @@ for i in range(args.batch_size):
     preds_img = np.copy(data[i, flair_vol_idx, max_slice_idx])
     preds_img = np.repeat(preds_img[:, :, np.newaxis], 3, axis=2)
 
-    for i in label_order:
-        color = colors[i]
-        l = pred[i, ...]
+    for j in label_order:
+        color = colors[j]
+        l = pred[j, ...]
         preds_img[l[max_slice_idx] == True] = color
         
     axis[i, 2].imshow(preds_img)
