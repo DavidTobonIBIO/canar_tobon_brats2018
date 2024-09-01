@@ -12,9 +12,7 @@ import matplotlib.pyplot as plt
 args = parser.parse_args()
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
-device = torch.device("cpu")
-if args.cuda:
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+device = torch.device("cuda" if args.cuda else "cpu")
 
 # Set random seed
 torch.manual_seed(args.seed)
@@ -55,6 +53,31 @@ metrics_fn = build_metric_fn(
 
 model.eval()
 
+def calculate_batch_mean_pixel_accuracy(preds, labels):
+    """
+    Calculate the mean pixel accuracy for a batch of data.
+    
+    Args:
+    - preds (numpy array): Predictions with shape (batch_size, num_classes, height, width).
+    - labels (numpy array): Ground truth labels with shape (batch_size, num_classes, height, width).
+    
+    Returns:
+    - mean_pixel_accuracy (float): Mean pixel accuracy.
+    """
+    correct_pixels = 0
+    total_pixels = 0
+    
+    batch_size = preds.shape[0]
+    
+    for i in range(batch_size):
+        pred = np.argmax(preds[i], axis=0)
+        label = np.argmax(labels[i], axis=0)
+        
+        correct_pixels += np.sum(pred == label)
+        total_pixels += np.size(label)
+    
+    mean_pixel_accuracy = correct_pixels / total_pixels
+    return mean_pixel_accuracy
 
 def calculate_avg_dice():
     avg_dice = 0.0
@@ -66,7 +89,6 @@ def calculate_avg_dice():
                 labels = raw_data["label"].to(device)
 
                 preds = model(data)
-
                 avg_dice += metrics_fn(data, labels, model=model)
 
                 pbar.set_postfix(
@@ -80,9 +102,36 @@ def calculate_avg_dice():
 
     print(f"Average Dice: {avg_dice}")
 
+def calculate_mean_pixel_accuracy():
+    total_accuracy = 0.0
+
+    with torch.no_grad():
+        with tqdm(total=len(valid_loader), desc="Validation", unit="batch") as pbar:
+            for idx, raw_data in enumerate(valid_loader):
+                data = raw_data["image"].to(device)
+                labels = raw_data["label"].to(device)
+
+                preds = model(data)
+                preds = torch.softmax(preds, dim=1).cpu().numpy()
+                labels = labels.cpu().numpy()
+                
+                accuracy = calculate_batch_mean_pixel_accuracy(preds, labels)
+                total_accuracy += accuracy
+
+                pbar.set_postfix(
+                    {
+                        "val_pixel_accuracy": total_accuracy / (idx + 1),
+                    }
+                )
+                pbar.update(1)
+
+    total_accuracy /= len(valid_loader)
+
+    print(f"Mean Pixel Accuracy: {total_accuracy}")
 
 if args.compute_metrics:
     calculate_avg_dice()
+    calculate_mean_pixel_accuracy()
 
 raw_data = next(iter(valid_loader))
 data = raw_data["image"].to(device)
@@ -147,5 +196,5 @@ for i in range(args.batch_size):
     axis[i, 2].axis("off")
 
 plt.tight_layout()
-plt.show()
 plt.savefig(os.path.join(visualizations_dir, f"pred_{args.save}.png"))
+plt.show()
