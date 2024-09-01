@@ -94,7 +94,7 @@ os.makedirs(visualizations_dir, exist_ok=True)
 
 data = raw_data["image"].cpu().numpy()
 labels = raw_data["label"].cpu().numpy()
-preds = torch.softmax(preds, dim=1) > 0.5
+preds = torch.softmax(preds, dim=1) >= 1
 preds = preds.detach().cpu().numpy()
 
 print("Data shape: ", data.shape)
@@ -148,4 +148,4 @@ for i in range(args.batch_size):
 
 plt.tight_layout()
 plt.show()
-plt.savefig(os.path.join(visualizations_dir, "pred.png"))
+plt.savefig(os.path.join(visualizations_dir, f"pred_{args.save}.png"))
