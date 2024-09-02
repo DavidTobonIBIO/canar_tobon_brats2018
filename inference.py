@@ -53,31 +53,20 @@ metrics_fn = build_metric_fn(
 
 model.eval()
 
-def calculate_batch_mean_pixel_accuracy(preds, labels):
-    """
-    Calculate the mean pixel accuracy for a batch of data.
-    
-    Args:
-    - preds (numpy array): Predictions with shape (batch_size, num_classes, height, width).
-    - labels (numpy array): Ground truth labels with shape (batch_size, num_classes, height, width).
-    
-    Returns:
-    - mean_pixel_accuracy (float): Mean pixel accuracy.
-    """
-    correct_pixels = 0
-    total_pixels = 0
-    
-    batch_size = preds.shape[0]
-    
-    for i in range(batch_size):
-        pred = np.argmax(preds[i], axis=0)
-        label = np.argmax(labels[i], axis=0)
-        
-        correct_pixels += np.sum(pred == label)
-        total_pixels += np.size(label)
-    
-    mean_pixel_accuracy = correct_pixels / total_pixels
-    return mean_pixel_accuracy
+def calculate_batch_miou(preds, labels):
+    miou = 0.0
+    for i in range(preds.shape[0]):
+        pred = preds[i, ...]
+        label = labels[i, ...]
+
+        intersection = np.logical_and(pred, label).sum()
+        union = np.logical_or(pred, label).sum()
+
+        miou += intersection / union
+
+    miou /= preds.shape[0]
+
+    return miou
 
 def calculate_avg_dice():
     avg_dice = 0.0
@@ -102,8 +91,8 @@ def calculate_avg_dice():
 
     print(f"Average Dice: {avg_dice}")
 
-def calculate_mean_pixel_accuracy():
-    total_accuracy = 0.0
+def calculate_miou():
+    mean_pixel_accuracy = 0.0
 
     with torch.no_grad():
         with tqdm(total=len(valid_loader), desc="Validation", unit="batch") as pbar:
@@ -112,26 +101,28 @@ def calculate_mean_pixel_accuracy():
                 labels = raw_data["label"].to(device)
 
                 preds = model(data)
-                preds = torch.softmax(preds, dim=1).cpu().numpy()
-                labels = labels.cpu().numpy()
-                
-                accuracy = calculate_batch_mean_pixel_accuracy(preds, labels)
-                total_accuracy += accuracy
+                preds = torch.softmax(preds, dim=1) >= 1
+                preds = preds.detach().cpu().numpy()
+
+                labels = labels.detach().cpu().numpy()
+
+                mean_pixel_accuracy += calculate_batch_miou(preds, labels)
 
                 pbar.set_postfix(
                     {
-                        "val_pixel_accuracy": total_accuracy / (idx + 1),
+                        "val_mean_pixel_accuracy": mean_pixel_accuracy / (idx + 1),
                     }
                 )
                 pbar.update(1)
 
-    total_accuracy /= len(valid_loader)
+    mean_pixel_accuracy /= len(valid_loader)
 
-    print(f"Mean Pixel Accuracy: {total_accuracy}")
+    print(f"mIoU: {mean_pixel_accuracy}")
+
 
 if args.compute_metrics:
     calculate_avg_dice()
-    calculate_mean_pixel_accuracy()
+    calculate_miou()
 
 raw_data = next(iter(valid_loader))
 data = raw_data["image"].to(device)
