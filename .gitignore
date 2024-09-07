@@ -1,4 +1,5 @@
 # Project specific
+/eval
 /temp_data
 *.zip
 /data3D
