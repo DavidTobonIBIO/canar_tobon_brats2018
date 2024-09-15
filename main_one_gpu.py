@@ -78,8 +78,7 @@ def main(epochs, log_interval):
     # Model parameters
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = build_loss_fn(args.loss)
-    training_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.1)
-
+    training_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
     # Define metrics
 
     metrics_dict = {

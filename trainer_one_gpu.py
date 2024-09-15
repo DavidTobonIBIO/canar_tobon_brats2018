@@ -121,7 +121,7 @@ class Brats2018Trainer:
 
                 self.epoch_val_loss = epoch_avg_loss
 
-        # return epoch_avg_loss, total_dice
+        return epoch_avg_loss, total_dice
 
     def _run_train_val(self):
 
@@ -136,7 +136,7 @@ class Brats2018Trainer:
             self._train_step()
 
             # Validation
-            self._val_step()
+            val_loss, total_dice = self._val_step()
 
             # Update metrics
 
@@ -147,9 +147,9 @@ class Brats2018Trainer:
             if self.wandb:
                 self._log_metrics()
 
-            self.training_scheduler.step()
+            self.training_scheduler.step(val_loss)
 
-    def _update_metrics(self) -> tuple[bool, bool]:
+    def _update_metrics(self) -> bool:
         save_checkpoint = False
         if self.epoch_train_loss <= self.best_train_loss:
             self.best_train_loss = self.epoch_train_loss
@@ -157,7 +157,7 @@ class Brats2018Trainer:
 
         if self.epoch_val_loss <= self.best_val_loss:
             self.best_val_loss = self.epoch_val_loss
-            save_checkpoint = True
+            save_checkpoint = True  # Save the best validation loss model
 
         if self.compute_metrics:
             if self.epoch_val_dice >= self.best_val_dice:
@@ -171,6 +171,7 @@ class Brats2018Trainer:
             "train_loss": self.epoch_train_loss,
             "val_loss": self.epoch_val_loss,
             "mean_dice": self.epoch_val_dice,
+            "learning_rate": self.optimizer.param_groups[0]['lr'],  # Log learning rate
         }
         wandb.log(log_data)
 
