@@ -189,9 +189,9 @@ def save_visualization(flair_data, gt_data, pred_data, folder):
         
         # Define colors for labels
         colors = {
-            1: [0, 255, 255],  # Red for label 1
-            2: [255, 255, 0],  # Green for label 2
-            4: [255, 0, 0]   # Blue for label 3
+            1: [0, 255, 255], # Cyan for label 1
+            2: [255, 255, 0], # Yellow for label 2
+            4: [255, 0, 0] # Red for label 3
         }
         
         # Apply colors for ground truth
