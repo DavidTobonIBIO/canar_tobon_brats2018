@@ -189,9 +189,9 @@ def save_visualization(flair_data, gt_data, pred_data, folder):
         
         # Define colors for labels
         colors = {
-            1: [255, 0, 0],  # Red for label 1
-            2: [0, 255, 0],  # Green for label 2
-            4: [0, 0, 255]   # Blue for label 3
+            1: [0, 255, 255],  # Red for label 1
+            2: [255, 255, 0],  # Green for label 2
+            4: [255, 0, 0]   # Blue for label 3
         }
         
         # Apply colors for ground truth
@@ -232,11 +232,11 @@ def save_visualization(flair_data, gt_data, pred_data, folder):
     # Plot subplots for the static images
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
     axes[0].imshow(gt_static)
-    axes[0].set_title('GT - Highest Slice')
+    axes[0].set_title('GT - higher mask area slice')
     axes[0].axis('off')
 
     axes[1].imshow(pred_static)
-    axes[1].set_title('Prediction - Highest Slice')
+    axes[1].set_title('Prediction - higher mask area slice')
     axes[1].axis('off')
 
     plt.tight_layout()
