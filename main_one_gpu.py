@@ -15,6 +15,7 @@ args = parser.parse_args()
 
 def main(epochs, log_interval):
 
+    #Check if CUDA is available and set the device
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device("cpu")
     if args.cuda:
@@ -76,9 +77,10 @@ def main(epochs, log_interval):
             model.to(device)
         print("Weights loaded successfully from", args.pretrained)
     # Model parameters
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
     criterion = build_loss_fn(args.loss)
-    training_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+    #training_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+    training_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
     # Define metrics
 
     metrics_dict = {

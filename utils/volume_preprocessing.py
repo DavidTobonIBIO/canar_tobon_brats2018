@@ -190,7 +190,7 @@ class Brats2018Preprocessor:
 
         # stack modalities along the first dimension
         modalities = np.concatenate(
-            (t1_transv, flair_transv, t1ce_transv, t2_transv),
+            (flair_transv, t1_transv, t1ce_transv, t2_transv),
             axis=0,
         )
         label = label_transv
