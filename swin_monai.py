@@ -50,9 +50,8 @@ class AverageMeter(object):
         self.avg = np.where(self.count > 0, self.sum / self.count, self.sum)
 
 
-def save_checkpoint(model, epoch, model_name, dir_add):
+def save_checkpoint(model, epoch, best_acc, model_name):
 
-    best_acc = 0
     state_dict = model.state_dict()
     save_dict = {"epoch": epoch, "model_state_dict": state_dict, "best_acc": best_acc}
     file_name = os.path.join(dir_add, model_name)
@@ -259,65 +258,81 @@ def trainer(
     dices_avg = []
     loss_epochs = []
     trains_epoch = []
-    for epoch in tqdm(range(start_epoch, max_epochs)):
-        print(time.ctime(), "Epoch:", epoch)
-        epoch_time = time.time()
-        train_loss = train_epoch(
-            model,
-            train_loader,
-            optimizer,
-            epoch=epoch,
-            loss_func=loss_func,
-        )
-        print(
-            "Final training  {}/{}".format(epoch, max_epochs - 1),
-            "loss: {:.4f}".format(train_loss),
-            "time {:.2f}s".format(time.time() - epoch_time),
-        )
-
-        if (epoch + 1) % val_every == 0 or epoch == 0:
-            loss_epochs.append(train_loss)
-            trains_epoch.append(int(epoch))
+    
+    with tqdm(range(max_epochs), desc="Epochs") as pbar:
+        for epoch in range(start_epoch, max_epochs):
+            print(time.ctime(), "Epoch:", epoch)
             epoch_time = time.time()
-            val_acc = val_epoch(
+            train_loss = train_epoch(
                 model,
-                val_loader,
+                train_loader,
+                optimizer,
                 epoch=epoch,
-                acc_func=acc_func,
-                model_inferer=model_inferer,
-                post_sigmoid=post_sigmoid,
-                post_pred=post_pred,
+                loss_func=loss_func,
             )
-            dice_tc = val_acc[0]
-            dice_wt = val_acc[1]
-            dice_et = val_acc[2]
-            val_avg_acc = np.mean(val_acc)
             print(
-                "Final validation stats {}/{}".format(epoch, max_epochs - 1),
-                ", dice_tc:",
-                dice_tc,
-                ", dice_wt:",
-                dice_wt,
-                ", dice_et:",
-                dice_et,
-                ", Dice_Avg:",
-                val_avg_acc,
-                ", time {:.2f}s".format(time.time() - epoch_time),
+                "Final training  {}/{}".format(epoch, max_epochs - 1),
+                "loss: {:.4f}".format(train_loss),
+                "time {:.2f}s".format(time.time() - epoch_time),
             )
-            dices_tc.append(dice_tc)
-            dices_wt.append(dice_wt)
-            dices_et.append(dice_et)
-            dices_avg.append(val_avg_acc)
-            if val_avg_acc > val_acc_max:
-                print("new best ({:.6f} --> {:.6f}). ".format(val_acc_max, val_avg_acc))
-                val_acc_max = val_avg_acc
-                save_checkpoint(
+
+            if (epoch + 1) % val_every == 0 or epoch == 0:
+                loss_epochs.append(train_loss)
+                trains_epoch.append(int(epoch))
+                epoch_time = time.time()
+                val_acc = val_epoch(
                     model,
-                    epoch,
-                    best_acc=val_acc_max,
+                    val_loader,
+                    epoch=epoch,
+                    acc_func=acc_func,
+                    model_inferer=model_inferer,
+                    post_sigmoid=post_sigmoid,
+                    post_pred=post_pred,
                 )
-            scheduler.step()
-    print("Training Finished !, Best Accuracy: ", val_acc_max)
+                dice_tc = val_acc[0]
+                dice_wt = val_acc[1]
+                dice_et = val_acc[2]
+                val_avg_acc = np.mean(val_acc)
+                print(
+                    "Final validation stats {}/{}".format(epoch, max_epochs - 1),
+                    ", dice_tc:",
+                    dice_tc,
+                    ", dice_wt:",
+                    dice_wt,
+                    ", dice_et:",
+                    dice_et,
+                    ", Dice_Avg:",
+                    val_avg_acc,
+                    ", time {:.2f}s".format(time.time() - epoch_time),
+                )
+                dices_tc.append(dice_tc)
+                dices_wt.append(dice_wt)
+                dices_et.append(dice_et)
+                dices_avg.append(val_avg_acc)
+                if val_avg_acc > val_acc_max:
+                    print("new best ({:.6f} --> {:.6f}). ".format(val_acc_max, val_avg_acc))
+                    val_acc_max = val_avg_acc
+                    save_checkpoint(
+                        model,
+                        epoch,
+                        val_acc_max,
+                        args.save
+                    )
+                scheduler.step()
+                if args.wandb:
+                    wandb.log(
+                        {
+                            "epoch": epoch,
+                            "train_loss": train_loss,
+                            "val_dice_tc": dice_tc,
+                            "val_dice_wt": dice_wt,
+                            "val_dice_et": dice_et,
+                            "val_dice_avg": val_avg_acc,
+                        }
+                    )
+                
+            pbar.update(1)
+        print("Training Finished !, Best Accuracy: ", val_acc_max)
     return (
         val_acc_max,
         dices_tc,
@@ -332,9 +347,15 @@ def trainer(
 if __name__ == "__main__":
 
     args = parser.parse_args()
+    
+    if args.wandb:
+        wandb.init(project="3d-segmentation", name=args.run_name)
+        wandb.config.update(args)
 
     print_config()
-
+    if args.cuda:
+        torch.cuda.manual_seed(args.seed)
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Set paths
