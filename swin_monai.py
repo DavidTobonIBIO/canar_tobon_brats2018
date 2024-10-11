@@ -50,11 +50,11 @@ class AverageMeter(object):
         self.avg = np.where(self.count > 0, self.sum / self.count, self.sum)
 
 
-def save_checkpoint(model, epoch, best_acc, model_name):
+def save_checkpoint(model, epoch, best_acc, save_dir, model_name):
 
     state_dict = model.state_dict()
     save_dict = {"epoch": epoch, "model_state_dict": state_dict, "best_acc": best_acc}
-    file_name = os.path.join(dir_add, model_name)
+    file_name = os.path.join(save_dir, model_name)
     torch.save(save_dict, file_name)
     print(f"Model saved as {file_name}")
 
@@ -316,6 +316,7 @@ def trainer(
                         model,
                         epoch,
                         val_acc_max,
+                        parent_dir,
                         args.save
                     )
                 scheduler.step()
