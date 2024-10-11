@@ -1,4 +1,5 @@
 # Project specific
+/swin_monai_data
 /eval
 /temp_data
 *.zip
