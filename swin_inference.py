@@ -14,6 +14,7 @@ from monai.transforms import (
 from monai.data import decollate_batch
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 
 
 # Define paths
@@ -100,6 +101,17 @@ with torch.no_grad():
 # Save image
 print('Saving image...')
 
+
+# Define custom colormap for the labels
+cmap = mcolors.ListedColormap(['black', 'cyan', 'yellow', 'red'])
+
+# Define normalization boundaries (0 for background, 1 for label 1, 2 for label 2, 4 for label 4)
+bounds = [0, 1, 2, 4, 5]
+norm = mcolors.BoundaryNorm(bounds, cmap.N)
+
+# Save image
+print('Saving image...')
+
 first_chanel_vol = image_np[0, 0, :, :]
 first_chanel_vol = (first_chanel_vol - np.min(first_chanel_vol)) / (np.max(first_chanel_vol) - np.min(first_chanel_vol))
 first_chanel_vol = (first_chanel_vol * 255).astype(np.uint8)
@@ -123,13 +135,29 @@ for i in range(z):
 
 print(f'Max area: {max_area} at z = {z_max}')
 
+# Plot the image with overlap of brain and segmentation masks
 fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+
+# Input image
 ax[0].imshow(first_chanel_vol[:, :, z_max], cmap='gray')
 ax[0].set_title('Input image')
-ax[1].imshow(label_back2og[:, :, z_max], cmap='gray')
+ax[0].axis('off')
+
+
+# Ground truth with overlap
+ax[1].imshow(first_chanel_vol[:, :, z_max], cmap='gray')
+ax[1].imshow(label_back2og[:, :, z_max], cmap=cmap, norm=norm, alpha=0.5)  # alpha for transparency
 ax[1].set_title('Ground truth')
-ax[2].imshow(seg_out[:, :, z_max], cmap='gray')
+ax[1].axis('off')
+
+
+# Prediction with overlap
+ax[2].imshow(first_chanel_vol[:, :, z_max], cmap='gray')
+ax[2].imshow(seg_out[:, :, z_max], cmap=cmap, norm=norm, alpha=0.5)  # alpha for transparency
 ax[2].set_title('Prediction')
-plt.savefig('swin_inference.png')
+ax[2].axis('off')
+
+plt.savefig('swin_inference_overlap.png')
 
 print('Inference done!')
+
