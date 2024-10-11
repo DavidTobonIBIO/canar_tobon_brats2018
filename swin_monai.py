@@ -356,7 +356,7 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     max_epochs = args.epochs
     lr = args.lr
-    sw_batch_size = 2
+    sw_batch_size = 1
     infer_overlap = 0.5
     val_every = 1
 
