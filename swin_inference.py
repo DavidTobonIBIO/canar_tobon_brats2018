@@ -21,11 +21,11 @@ import matplotlib.colors as mcolors
 this_file = os.path.abspath(__file__)
 parent_dir = os.path.dirname(this_file)
 data3d_dir = os.path.join(parent_dir, "data3D", "train_data")
-flair_path = '/home/scanar/BCV_project/canar_tobon_brats2018/data3D/train_data/Brats18_2013_0_1/Brats18_2013_0_1_flair.nii'
-t1_path = '/home/scanar/BCV_project/canar_tobon_brats2018/data3D/train_data/Brats18_2013_0_1/Brats18_2013_0_1_t1.nii'
-t1_ce_path = '/home/scanar/BCV_project/canar_tobon_brats2018/data3D/train_data/Brats18_2013_0_1/Brats18_2013_0_1_t1ce.nii'
-t2_path = '/home/scanar/BCV_project/canar_tobon_brats2018/data3D/train_data/Brats18_2013_0_1/Brats18_2013_0_1_t2.nii'
-seg_path = '/home/scanar/BCV_project/canar_tobon_brats2018/data3D/train_data/Brats18_2013_0_1/Brats18_2013_0_1_seg.nii'
+flair_path = '/home/scanar/BCV_project/canar_tobon_brats2018/swin_monai_data/val_data/Brats18_TCIA09_493_1/Brats18_TCIA09_493_1_flair.nii'
+t1_path = '/home/scanar/BCV_project/canar_tobon_brats2018/swin_monai_data/val_data/Brats18_TCIA09_493_1/Brats18_TCIA09_493_1_t1.nii'
+t1_ce_path = '/home/scanar/BCV_project/canar_tobon_brats2018/swin_monai_data/val_data/Brats18_TCIA09_493_1/Brats18_TCIA09_493_1_t1ce.nii'
+t2_path = '/home/scanar/BCV_project/canar_tobon_brats2018/swin_monai_data/val_data/Brats18_TCIA09_493_1/Brats18_TCIA09_493_1_t2.nii'
+seg_path = '/home/scanar/BCV_project/canar_tobon_brats2018/swin_monai_data/val_data/Brats18_TCIA09_493_1/Brats18_TCIA09_493_1_seg.nii'
 
 vols_path_lt = [flair_path, t1_path, t1_ce_path, t2_path]
 
@@ -157,7 +157,7 @@ ax[2].imshow(seg_out[:, :, z_max], cmap=cmap, norm=norm, alpha=0.5)  # alpha for
 ax[2].set_title('Prediction')
 ax[2].axis('off')
 
-plt.savefig('swin_inference_overlap.png')
+plt.savefig('swin_inference_overlap2.png')
 
 print('Inference done!')
 
