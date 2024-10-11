@@ -1,8 +1,5 @@
 import os
 import re
-import json
-import shutil
-import tempfile
 import time
 from tqdm import tqdm
 
@@ -11,7 +8,6 @@ from argument_parser import parser
 
 import matplotlib.pyplot as plt
 import numpy as np
-import nibabel as nib
 
 from monai.losses import DiceLoss
 from monai.inferers import sliding_window_inference
@@ -258,7 +254,7 @@ def trainer(
     dices_avg = []
     loss_epochs = []
     trains_epoch = []
-    
+
     with tqdm(range(max_epochs), desc="Epochs") as pbar:
         for epoch in range(start_epoch, max_epochs):
             print(time.ctime(), "Epoch:", epoch)
@@ -310,15 +306,13 @@ def trainer(
                 dices_et.append(dice_et)
                 dices_avg.append(val_avg_acc)
                 if val_avg_acc > val_acc_max:
-                    print("new best ({:.6f} --> {:.6f}). ".format(val_acc_max, val_avg_acc))
-                    val_acc_max = val_avg_acc
-                    save_checkpoint(
-                        model,
-                        epoch,
-                        val_acc_max,
-                        parent_dir,
-                        args.save
+                    print(
+                        "new best ({:.6f} --> {:.6f}). ".format(
+                            val_acc_max, val_avg_acc
+                        )
                     )
+                    val_acc_max = val_avg_acc
+                    save_checkpoint(model, epoch, val_acc_max, parent_dir, args.save)
                 scheduler.step()
                 if args.wandb:
                     wandb.log(
@@ -331,7 +325,7 @@ def trainer(
                             "val_dice_avg": val_avg_acc,
                         }
                     )
-                
+
             pbar.update(1)
         print("Training Finished !, Best Accuracy: ", val_acc_max)
     return (
@@ -348,7 +342,7 @@ def trainer(
 if __name__ == "__main__":
 
     args = parser.parse_args()
-    
+
     if args.wandb:
         wandb.init(project="3d-segmentation", name=args.run_name)
         wandb.config.update(args)
@@ -356,7 +350,7 @@ if __name__ == "__main__":
     print_config()
     if args.cuda:
         torch.cuda.manual_seed(args.seed)
-    
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Set paths
@@ -378,7 +372,7 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     max_epochs = args.epochs
     lr = args.lr
-    sw_batch_size = 1
+    sw_batch_size = 2
     infer_overlap = 0.5
     val_every = 1
 
@@ -450,9 +444,9 @@ if __name__ == "__main__":
         post_sigmoid=post_sigmoid,
         post_pred=post_pred,
     )
-    
+
     print(f"train completed, best average dice: {val_acc_max:.4f} ")
-    
+
     plt.figure("train", (12, 6))
     plt.subplot(1, 2, 1)
     plt.title("Epoch Average Loss")
