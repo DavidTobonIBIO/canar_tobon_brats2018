@@ -1,6 +1,5 @@
 # Project specific
 /segformer3d
-
 /swin_monai_data
 /eval
 /temp_data
