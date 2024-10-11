@@ -348,8 +348,6 @@ if __name__ == "__main__":
         wandb.config.update(args)
 
     print_config()
-    if args.cuda:
-        torch.cuda.manual_seed(args.seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
